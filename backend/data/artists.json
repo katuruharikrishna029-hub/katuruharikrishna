@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Aura Beats",
+    "genre": "Lo-Fi / Chillhop",
+    "listeners": "1,420,890 monthly listeners",
+    "avatar": "images/artist1.jpg",
+    "topTrackIds": ["track-1", "track-5"]
+  },
+  {
+    "name": "Kavinsky Waves",
+    "genre": "Synthwave / Retrowave",
+    "listeners": "2,741,900 monthly listeners",
+    "avatar": "images/artist2.jpg",
+    "topTrackIds": ["track-2", "track-4"]
+  },
+  {
+    "name": "Celeste Moon",
+    "genre": "Ambient / Sound Healing",
+    "listeners": "984,120 monthly listeners",
+    "avatar": "images/artist3.jpg",
+    "topTrackIds": ["track-3"]
+  },
+  {
+    "name": "Hyperion X",
+    "genre": "EDM / Future Bass",
+    "listeners": "3,120,500 monthly listeners",
+    "avatar": "images/artist4.jpg",
+    "topTrackIds": ["track-4", "track-6"]
+  }
+]

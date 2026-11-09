@@ -561,8 +561,38 @@ class PreZifyAudioEngine {
    4. USER INTERFACE & APPLICATION CONTROLLER
    ========================================================================== */
 
+/* ==========================================================================
+   BACKEND REST API CLIENT CONNECTOR
+   ========================================================================== */
+
+class PreZifyApiClient {
+  constructor() {
+    // Probe relative URL first, then default backend port 5000
+    this.apiBase = window.location.port === '5000' ? '' : 'http://localhost:5000';
+    this.isOnline = false;
+  }
+
+  async init() {
+    try {
+      const res = await fetch(`${this.apiBase}/api/songs`, { method: 'GET' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.data && json.data.length > 0) {
+          this.isOnline = true;
+          console.log(`[PreZify API] Connected to Backend (${json.data.length} songs loaded)`);
+          return json.data;
+        }
+      }
+    } catch (err) {
+      console.log('[PreZify API] Backend server offline, running in standalone client mode.');
+    }
+    return null;
+  }
+}
+
 class PreZifyApp {
   constructor() {
+    this.apiClient = new PreZifyApiClient();
     this.state = new PreZifyState();
     this.audioEngine = new PreZifyAudioEngine(
       this.state,
@@ -686,6 +716,15 @@ class PreZifyApp {
 
     // 5. Apply saved theme accent
     this.applyAccentTheme(this.state.settings.accent || 'purple');
+
+    // 6. Check for live Backend REST API
+    this.apiClient.init().then(serverTracks => {
+      if (serverTracks) {
+        const rateLabel = document.getElementById('engine-rate-label');
+        if (rateLabel) rateLabel.textContent = 'REST API Backend Online';
+        this.showToast('PreZify REST API Server Connected', 'cyan');
+      }
+    });
 
     console.log('PreZify Audio Streaming Platform initialized successfully.');
   }

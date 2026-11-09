@@ -1,0 +1,34 @@
+[
+  {
+    "id": "pl-cyberpunk",
+    "title": "Cyberpunk Pulse 2099",
+    "desc": "High-octane synthwave, dark synth, and industrial future beats for night drives.",
+    "cover": "images/cover2.jpg",
+    "creator": "PreZify Editorial",
+    "trackIds": ["track-2", "track-6", "track-4"]
+  },
+  {
+    "id": "pl-lofi",
+    "title": "Midnight Lo-Fi Chill",
+    "desc": "Mellow beats, vinyl dust, and relaxing keys designed for deep study and focus.",
+    "cover": "images/cover1.jpg",
+    "creator": "PreZify Lo-Fi Team",
+    "trackIds": ["track-1", "track-5", "track-3"]
+  },
+  {
+    "id": "pl-workout",
+    "title": "Adrenaline High-Speed",
+    "desc": "Electrifying progressive house & high BPM drops to smash your workout records.",
+    "cover": "images/cover4.jpg",
+    "creator": "PreZify Fitness",
+    "trackIds": ["track-4", "track-2", "track-6"]
+  },
+  {
+    "id": "pl-space",
+    "title": "Cosmic Deep Sleep",
+    "desc": "Binaural soundscapes and soothing ambient drones that melt away stress.",
+    "cover": "images/cover3.jpg",
+    "creator": "PreZify Sound Labs",
+    "trackIds": ["track-3", "track-1", "track-5"]
+  }
+]

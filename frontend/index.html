@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PreZify – Feel Every Beat. Live Every Moment.</title>
+  <meta name="description" content="PreZify is a next-generation music streaming experience with lossless audio, dynamic visualizers, and curated soundscapes.">
+  <link rel="icon" type="image/png" href="images/logo.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap Icons CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-default">
+
+  <!-- APP SHELL -->
+  <div class="app-shell" id="app">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="top-nav" id="top-nav">
+      <div class="nav-left">
+        <button class="icon-btn mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Navigation Menu">
+          <i class="bi bi-list"></i>
+        </button>
+        <a href="#" class="brand-link" id="brand-home-btn">
+          <div class="logo-box">
+            <img src="images/logo.png" alt="PreZify Logo" class="brand-logo">
+            <div class="logo-glow"></div>
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">PreZify</span>
+            <span class="brand-badge">PRO</span>
+          </div>
+        </a>
+
+        <!-- Desktop Quick Nav Links -->
+        <nav class="nav-quick-links">
+          <button class="nav-pill active" data-nav="home">Home</button>
+          <button class="nav-pill" data-nav="discover">Explore</button>
+          <button class="nav-pill" data-nav="library">Library</button>
+        </nav>
+      </div>
+
+      <!-- CENTER: GLOBAL LIVE SEARCH -->
+      <div class="nav-center">
+        <div class="search-bar-wrapper">
+          <i class="bi bi-search search-icon"></i>
+          <input type="text" id="global-search-input" placeholder="Search songs, artists, albums, or genres..." autocomplete="off">
+          <button class="search-clear-btn" id="search-clear-btn" aria-label="Clear Search">
+            <i class="bi bi-x-lg"></i>
+          </button>
+          <kbd class="search-shortcut-badge">Ctrl K</kbd>
+        </div>
+      </div>
+
+      <!-- RIGHT: ACTIONS, PREMIUM & PROFILE -->
+      <div class="nav-right">
+        <button class="premium-banner-btn" id="nav-premium-btn">
+          <i class="bi bi-stars"></i>
+          <span>Explore Premium</span>
+        </button>
+
+        <!-- Notification Bell -->
+        <div class="notification-wrapper">
+          <button class="icon-btn notification-btn" id="notification-toggle" aria-label="Notifications">
+            <i class="bi bi-bell-fill"></i>
+            <span class="notification-indicator"></span>
+          </button>
+          <!-- Notification Dropdown Popover -->
+          <div class="dropdown-popover notifications-popover" id="notifications-popover">
+            <div class="popover-header">
+              <h4>Notifications</h4>
+              <button class="text-btn text-muted" id="mark-all-read-btn">Mark all read</button>
+            </div>
+            <div class="notification-list">
+              <div class="notification-item unread">
+                <div class="notif-icon bg-accent-glow"><i class="bi bi-disc"></i></div>
+                <div class="notif-content">
+                  <p class="notif-title"><strong>Neon Horizon</strong> is now streaming in Lossless Hi-Fi.</p>
+                  <span class="notif-time">10 mins ago</span>
+                </div>
+              </div>
+              <div class="notification-item unread">
+                <div class="notif-icon bg-cyan-glow"><i class="bi bi-heart-fill"></i></div>
+                <div class="notif-content">
+                  <p class="notif-title">Aura Beats added a new track to <strong>Tokyo Rain Reflections</strong>.</p>
+                  <span class="notif-time">2 hours ago</span>
+                </div>
+              </div>
+              <div class="notification-item">
+                <div class="notif-icon bg-purple-glow"><i class="bi bi-award-fill"></i></div>
+                <div class="notif-content">
+                  <p class="notif-title">Weekly Sound Recap: You listened to 48 hours of synthwave!</p>
+                  <span class="notif-time">Yesterday</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Profile Dropdown -->
+        <div class="profile-wrapper">
+          <button class="profile-btn" id="profile-toggle" aria-label="User Profile Menu">
+            <img src="images/artist1.jpg" alt="User Avatar" class="profile-avatar">
+            <span class="profile-name">Alex River</span>
+            <i class="bi bi-chevron-down profile-chevron"></i>
+          </button>
+          <!-- Profile Dropdown Popover -->
+          <div class="dropdown-popover profile-popover" id="profile-popover">
+            <div class="popover-user-card">
+              <img src="images/artist1.jpg" alt="Alex River" class="user-card-avatar">
+              <div class="user-card-info">
+                <strong>Alex River</strong>
+                <span>alex.river@prezify.stream</span>
+                <span class="badge-tier">PreZify Hi-Fi Member</span>
+              </div>
+            </div>
+            <div class="popover-divider"></div>
+            <ul class="popover-menu">
+              <li><button class="menu-item" data-action="view-liked"><i class="bi bi-heart"></i> Liked Songs</button></li>
+              <li><button class="menu-item" data-action="open-settings"><i class="bi bi-sliders"></i> Audio Equalizer & Settings</button></li>
+              <li><button class="menu-item" data-action="open-premium"><i class="bi bi-gem"></i> Subscription Plan</button></li>
+              <li class="popover-divider"></li>
+              <li><button class="menu-item text-danger" id="logout-btn"><i class="bi bi-box-arrow-right"></i> Switch Profile</button></li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- MAIN WRAPPER (SIDEBAR + MAIN CONTENT) -->
+    <div class="app-body">
+
+      <!-- LEFT SIDEBAR -->
+      <aside class="sidebar" id="sidebar">
+        <!-- Close button for mobile -->
+        <div class="sidebar-mobile-header">
+          <div class="logo-box">
+            <img src="images/logo.png" alt="PreZify" class="brand-logo">
+            <span class="brand-name">PreZify</span>
+          </div>
+          <button class="icon-btn" id="sidebar-close-btn"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <div class="sidebar-scrollable">
+          <!-- Main Menu -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Menu</div>
+            <ul class="sidebar-nav">
+              <li>
+                <button class="sidebar-link active" data-view="home">
+                  <i class="bi bi-house-door-fill"></i>
+                  <span>Home</span>
+                </button>
+              </li>
+              <li>
+                <button class="sidebar-link" data-view="discover">
+                  <i class="bi bi-compass-fill"></i>
+                  <span>Discover</span>
+                </button>
+              </li>
+              <li>
+                <button class="sidebar-link" data-view="search">
+                  <i class="bi bi-search"></i>
+                  <span>Search</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Your Collection -->
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">My Collection</div>
+            <ul class="sidebar-nav">
+              <li>
+                <button class="sidebar-link" data-view="library">
+                  <i class="bi bi-collection-play-fill"></i>
+                  <span>My Library</span>
+                </button>
+              </li>
+              <li>
+                <button class="sidebar-link" data-view="liked">
+                  <i class="bi bi-heart-fill icon-heart-glow"></i>
+                  <span>Liked Songs</span>
+                  <span class="sidebar-count-badge" id="liked-count-badge">0</span>
+                </button>
+              </li>
+              <li>
+                <button class="sidebar-link" data-view="history">
+                  <i class="bi bi-clock-history"></i>
+                  <span>Recently Played</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Custom Playlists Section -->
+          <div class="sidebar-section playlists-section">
+            <div class="sidebar-section-header">
+              <span class="sidebar-section-title">Playlists</span>
+              <button class="create-playlist-btn" id="create-playlist-trigger" title="Create New Playlist">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+            <ul class="sidebar-nav" id="sidebar-playlists-list">
+              <!-- Dynamically populated playlists -->
+            </ul>
+          </div>
+
+          <!-- Bottom Utilities in Sidebar -->
+          <div class="sidebar-section sidebar-bottom-section">
+            <div class="sidebar-section-title">System</div>
+            <ul class="sidebar-nav">
+              <li>
+                <button class="sidebar-link" id="sidebar-eq-btn">
+                  <i class="bi bi-soundwave"></i>
+                  <span>Equalizer & Visuals</span>
+                </button>
+              </li>
+              <li>
+                <button class="sidebar-link" id="sidebar-settings-btn">
+                  <i class="bi bi-gear-fill"></i>
+                  <span>Settings</span>
+                </button>
+              </li>
+            </ul>
+
+            <!-- Audio Engine Status Pill -->
+            <div class="audio-engine-badge">
+              <span class="pulse-dot"></span>
+              <div class="engine-info">
+                <span class="engine-title">Hi-Fi Audio Engine</span>
+                <span class="engine-sub" id="engine-rate-label">24-bit / 96kHz Lossless</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT CONTAINER -->
+      <main class="main-content" id="main-content">
+
+        <!-- ============================================== -->
+        <!-- VIEW 1: HOME VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel active" id="view-home">
+
+          <!-- HERO BANNER -->
+          <div class="hero-spotlight" id="hero-banner">
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+              <div class="hero-badge">
+                <i class="bi bi-lightning-charge-fill"></i> FEATURED PREZIFY ORIGINAL
+              </div>
+              <h1 class="hero-title" id="hero-title">Neon Horizon</h1>
+              <p class="hero-subtitle" id="hero-artist">Kavinsky Waves • Cyber Drive 2099</p>
+              <p class="hero-description">
+                Immerse yourself in cinematic 80s analog synthesizers, futuristic pulse rhythms, and deep neo-retro basslines designed for the night.
+              </p>
+              <div class="hero-actions">
+                <button class="btn btn-primary" id="hero-play-btn">
+                  <i class="bi bi-play-fill"></i>
+                  <span>Listen Now</span>
+                </button>
+                <button class="btn btn-glass" id="hero-like-btn">
+                  <i class="bi bi-heart"></i>
+                  <span>Add to Favorites</span>
+                </button>
+                <button class="btn btn-icon-glass" id="hero-share-btn" title="Share Track">
+                  <i class="bi bi-share-fill"></i>
+                </button>
+              </div>
+            </div>
+            <div class="hero-cover-wrap">
+              <img src="images/cover2.jpg" alt="Featured Album" class="hero-cover-img" id="hero-cover-img">
+              <div class="hero-vinyl-ring"></div>
+            </div>
+          </div>
+
+          <!-- MOOD & GENRE QUICK PILLS -->
+          <div class="genre-pills-row" id="genre-pills">
+            <button class="genre-pill active" data-genre="All">All Soundtracks</button>
+            <button class="genre-pill" data-genre="Synthwave">Synthwave</button>
+            <button class="genre-pill" data-genre="Lo-Fi">Lo-Fi Chill</button>
+            <button class="genre-pill" data-genre="Electronic">Electronic / EDM</button>
+            <button class="genre-pill" data-genre="Ambient">Ambient Cosmos</button>
+            <button class="genre-pill" data-genre="Chillhop">Chillhop</button>
+            <button class="genre-pill" data-genre="Cyberpunk">Cyberpunk</button>
+          </div>
+
+          <!-- SECTION: TRENDING SONGS (RANKED LIST) -->
+          <div class="content-section">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Trending Songs</h2>
+                <p class="section-subtitle">Most streamed tracks worldwide on PreZify today</p>
+              </div>
+              <button class="section-action-btn" id="play-all-trending-btn">
+                <i class="bi bi-play-circle-fill"></i> Play All
+              </button>
+            </div>
+
+            <div class="trending-grid" id="trending-songs-container">
+              <!-- Dynamically populated cards -->
+            </div>
+          </div>
+
+          <!-- SECTION: FEATURED PLAYLISTS -->
+          <div class="content-section">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Curated For You</h2>
+                <p class="section-subtitle">Editorial playlists hand-crafted by PreZify sound architects</p>
+              </div>
+            </div>
+
+            <div class="cards-grid" id="curated-playlists-container">
+              <!-- Curated cards rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- SECTION: POPULAR ARTISTS -->
+          <div class="content-section">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Popular Artists</h2>
+                <p class="section-subtitle">Pioneers redefining electronic, lo-fi, and futuristic music</p>
+              </div>
+            </div>
+
+            <div class="artists-grid" id="popular-artists-container">
+              <!-- Artists rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- SECTION: RECOMMENDED ALBUMS -->
+          <div class="content-section">
+            <div class="section-header">
+              <div>
+                <h2 class="section-title">Recommended Albums</h2>
+                <p class="section-subtitle">Deep dive into complete sonic journeys</p>
+              </div>
+            </div>
+
+            <div class="cards-grid" id="recommended-albums-container">
+              <!-- Albums rendered dynamically -->
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 2: DISCOVER / EXPLORE VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-discover">
+          <div class="panel-header">
+            <h1 class="panel-title">Explore Soundscapes</h1>
+            <p class="panel-subtitle">Browse through handcrafted genres, moods, and spatial audio collections</p>
+          </div>
+
+          <div class="discover-genres-grid" id="discover-categories-grid">
+            <!-- Rendered dynamically with rich color gradients -->
+          </div>
+
+          <div class="content-section mt-40">
+            <h2 class="section-title">Moods & Activities</h2>
+            <div class="moods-grid">
+              <div class="mood-card mood-chill" data-mood="chill">
+                <div class="mood-overlay"></div>
+                <i class="bi bi-cup-hot-fill mood-icon"></i>
+                <div class="mood-info">
+                  <h3>Late Night Coding</h3>
+                  <p>Mellow synth loops & chill beats</p>
+                </div>
+              </div>
+              <div class="mood-card mood-energy" data-mood="energy">
+                <div class="mood-overlay"></div>
+                <i class="bi bi-lightning-charge-fill mood-icon"></i>
+                <div class="mood-info">
+                  <h3>Hyper Drive</h3>
+                  <p>High octane cyberpunk & fast EDM</p>
+                </div>
+              </div>
+              <div class="mood-card mood-focus" data-mood="focus">
+                <div class="mood-overlay"></div>
+                <i class="bi bi-moon-stars-fill mood-icon"></i>
+                <div class="mood-info">
+                  <h3>Cosmic Deep Sleep</h3>
+                  <p>432Hz ambient sleep frequencies</p>
+                </div>
+              </div>
+              <div class="mood-card mood-retro" data-mood="retro">
+                <div class="mood-overlay"></div>
+                <i class="bi bi-cassette-fill mood-icon"></i>
+                <div class="mood-info">
+                  <h3>80s Neon Sunset</h3>
+                  <p>Pure vintage analog nostalgic bliss</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 3: SEARCH RESULTS VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-search">
+          <div class="panel-header">
+            <h1 class="panel-title" id="search-results-heading">Search</h1>
+            <p class="panel-subtitle" id="search-results-sub">Discover songs, artists, albums, or vibes</p>
+          </div>
+
+          <div id="search-active-content">
+            <!-- Top Match & Song Results -->
+            <div class="search-top-match-row" id="search-top-match-container"></div>
+            
+            <div class="content-section mt-30">
+              <h2 class="section-title">Song Matches</h2>
+              <div class="track-table-container">
+                <table class="track-table" id="search-tracks-table">
+                  <thead>
+                    <tr>
+                      <th class="th-num">#</th>
+                      <th class="th-title">Title</th>
+                      <th class="th-album">Album</th>
+                      <th class="th-genre">Genre</th>
+                      <th class="th-duration"><i class="bi bi-clock"></i></th>
+                      <th class="th-actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="search-tracks-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty search placeholder -->
+          <div class="empty-state" id="search-empty-state">
+            <div class="empty-icon-circle"><i class="bi bi-search"></i></div>
+            <h3>Explore the PreZify Universe</h3>
+            <p>Type track names, artists like "Aura Beats" or "Kavinsky Waves", or genres like "Synthwave".</p>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 4: MY LIBRARY -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-library">
+          <div class="panel-header library-header">
+            <div>
+              <h1 class="panel-title">Your Sound Library</h1>
+              <p class="panel-subtitle">All your curated playlists, favorite tracks, and personalized audio collections</p>
+            </div>
+            <button class="btn btn-primary" id="library-new-playlist-btn">
+              <i class="bi bi-plus-lg"></i> New Playlist
+            </button>
+          </div>
+
+          <div class="library-summary-row">
+            <div class="library-card liked-songs-big-card" id="lib-liked-card">
+              <div class="liked-card-glow"></div>
+              <i class="bi bi-heart-fill liked-card-icon"></i>
+              <div class="liked-card-meta">
+                <h2>Liked Songs</h2>
+                <p id="lib-liked-summary">0 tracks saved</p>
+              </div>
+              <button class="card-play-fab"><i class="bi bi-play-fill"></i></button>
+            </div>
+
+            <div class="library-card" id="lib-history-card">
+              <i class="bi bi-clock-history lib-sub-icon"></i>
+              <div class="liked-card-meta">
+                <h3>Recently Played</h3>
+                <p id="lib-history-summary">Jump back into your recent listening session</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-section mt-40">
+            <h2 class="section-title">Your Playlists</h2>
+            <div class="cards-grid" id="user-playlists-grid">
+              <!-- Playlists rendered here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 5: LIKED SONGS VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-liked">
+          <div class="playlist-detail-header">
+            <div class="playlist-art-wrap liked-art-box">
+              <i class="bi bi-heart-fill liked-header-icon"></i>
+            </div>
+            <div class="playlist-meta-wrap">
+              <span class="detail-type-badge">PLAYLIST</span>
+              <h1 class="detail-title">Liked Songs</h1>
+              <p class="detail-description">Your personalized vault of favorite songs on PreZify.</p>
+              <div class="detail-stats">
+                <span class="stat-user">Alex River</span>
+                <span class="stat-dot">•</span>
+                <span class="stat-count" id="liked-detail-count">0 songs</span>
+                <span class="stat-dot">•</span>
+                <span class="stat-time" id="liked-detail-time">0 mins</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-actions-bar">
+            <button class="btn btn-primary btn-round-play" id="liked-play-all-btn" title="Play All">
+              <i class="bi bi-play-fill"></i>
+            </button>
+            <button class="icon-btn btn-glass" id="liked-shuffle-btn" title="Shuffle Play">
+              <i class="bi bi-shuffle"></i>
+            </button>
+          </div>
+
+          <div class="track-table-container">
+            <table class="track-table" id="liked-tracks-table">
+              <thead>
+                <tr>
+                  <th class="th-num">#</th>
+                  <th class="th-title">Title</th>
+                  <th class="th-album">Album</th>
+                  <th class="th-genre">Genre</th>
+                  <th class="th-duration"><i class="bi bi-clock"></i></th>
+                  <th class="th-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="liked-tracks-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state hidden" id="liked-empty-state">
+            <div class="empty-icon-circle"><i class="bi bi-heart"></i></div>
+            <h3>Songs you love will show up here</h3>
+            <p>Save tracks you like by clicking the heart icon on any song.</p>
+            <button class="btn btn-secondary mt-16" data-view="home">Browse Trending Songs</button>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 6: PLAYLIST DETAIL VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-playlist-detail">
+          <div class="playlist-detail-header">
+            <div class="playlist-art-wrap">
+              <img src="images/cover1.jpg" alt="Playlist Cover" class="playlist-header-img" id="pl-detail-img">
+            </div>
+            <div class="playlist-meta-wrap">
+              <span class="detail-type-badge" id="pl-detail-type">PLAYLIST</span>
+              <h1 class="detail-title" id="pl-detail-title">Playlist Title</h1>
+              <p class="detail-description" id="pl-detail-desc">Playlist Description</p>
+              <div class="detail-stats">
+                <span class="stat-user" id="pl-detail-creator">PreZify Curators</span>
+                <span class="stat-dot">•</span>
+                <span class="stat-count" id="pl-detail-count">0 songs</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-actions-bar">
+            <button class="btn btn-primary btn-round-play" id="pl-play-all-btn" title="Play All">
+              <i class="bi bi-play-fill"></i>
+            </button>
+            <button class="icon-btn btn-glass" id="pl-shuffle-btn" title="Shuffle Play">
+              <i class="bi bi-shuffle"></i>
+            </button>
+            <button class="icon-btn btn-glass" id="pl-delete-btn" title="Delete Playlist" style="display: none;">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+
+          <div class="track-table-container">
+            <table class="track-table">
+              <thead>
+                <tr>
+                  <th class="th-num">#</th>
+                  <th class="th-title">Title</th>
+                  <th class="th-album">Album</th>
+                  <th class="th-genre">Genre</th>
+                  <th class="th-duration"><i class="bi bi-clock"></i></th>
+                  <th class="th-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pl-tracks-tbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 7: ARTIST DETAIL VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-artist-detail">
+          <div class="artist-hero-header">
+            <div class="artist-hero-bg" id="artist-hero-bg"></div>
+            <div class="artist-hero-content">
+              <div class="artist-avatar-wrap">
+                <img src="images/artist1.jpg" alt="Artist" class="artist-header-avatar" id="artist-detail-avatar">
+              </div>
+              <div class="artist-meta">
+                <div class="verified-tag">
+                  <i class="bi bi-patch-check-fill"></i> Verified PreZify Artist
+                </div>
+                <h1 class="artist-name" id="artist-detail-name">Aura Beats</h1>
+                <p class="artist-listeners" id="artist-detail-listeners">1,420,890 monthly listeners</p>
+                <div class="artist-actions">
+                  <button class="btn btn-primary" id="artist-play-btn">
+                    <i class="bi bi-play-fill"></i> Play Popular
+                  </button>
+                  <button class="btn btn-glass" id="artist-follow-btn">Follow</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-section mt-30">
+            <h2 class="section-title">Popular Releases</h2>
+            <div class="track-table-container">
+              <table class="track-table">
+                <thead>
+                  <tr>
+                    <th class="th-num">#</th>
+                    <th class="th-title">Title</th>
+                    <th class="th-album">Album</th>
+                    <th class="th-genre">Genre</th>
+                    <th class="th-duration"><i class="bi bi-clock"></i></th>
+                    <th class="th-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="artist-tracks-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 8: RECENTLY PLAYED HISTORY VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-history">
+          <div class="panel-header library-header">
+            <div>
+              <h1 class="panel-title">Recently Played History</h1>
+              <p class="panel-subtitle">Tracks and albums you recently listened to on this device</p>
+            </div>
+            <button class="btn btn-glass" id="clear-history-btn">
+              <i class="bi bi-trash"></i> Clear History
+            </button>
+          </div>
+
+          <div class="track-table-container">
+            <table class="track-table">
+              <thead>
+                <tr>
+                  <th class="th-num">#</th>
+                  <th class="th-title">Title</th>
+                  <th class="th-album">Album</th>
+                  <th class="th-genre">Genre</th>
+                  <th class="th-duration"><i class="bi bi-clock"></i></th>
+                  <th class="th-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="history-tracks-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state hidden" id="history-empty-state">
+            <div class="empty-icon-circle"><i class="bi bi-clock-history"></i></div>
+            <h3>No listening history yet</h3>
+            <p>Start listening to songs and your session history will automatically appear here.</p>
+          </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- VIEW 9: FULLSCREEN LYRICS & VISUALIZER VIEW -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-lyrics">
+          <div class="lyrics-view-container">
+            <div class="lyrics-left-panel">
+              <div class="lyrics-art-box">
+                <img src="images/cover1.jpg" alt="Now Playing" class="lyrics-cover-img" id="lyrics-cover-img">
+              </div>
+              <div class="lyrics-meta">
+                <h2 id="lyrics-song-title">Song Title</h2>
+                <p id="lyrics-artist-name">Artist Name</p>
+              </div>
+              <!-- Real-time Live Audio Visualizer Canvas -->
+              <div class="lyrics-visualizer-box">
+                <canvas id="lyrics-canvas" width="340" height="120"></canvas>
+                <span class="visualizer-label"><i class="bi bi-soundwave"></i> LIVE FREQUENCY SPECTRUM</span>
+              </div>
+            </div>
+
+            <div class="lyrics-right-panel">
+              <div class="lyrics-header">
+                <h3>Synchronized Lyrics</h3>
+                <button class="btn btn-icon-glass" id="lyrics-close-btn" title="Back to Main View">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div class="lyrics-lines-container" id="lyrics-lines-container">
+                <!-- Synchronized line elements rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- UP NEXT / QUEUE DRAWER -->
+      <aside class="queue-drawer" id="queue-drawer">
+        <div class="queue-header">
+          <div class="queue-title-box">
+            <i class="bi bi-music-note-list"></i>
+            <h3>Playing Queue</h3>
+          </div>
+          <button class="icon-btn" id="queue-close-btn"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <div class="queue-body">
+          <div class="queue-section-title">Now Playing</div>
+          <div class="queue-now-playing" id="queue-now-playing-item">
+            <!-- Now playing item -->
+          </div>
+
+          <div class="queue-section-header">
+            <div class="queue-section-title">Next In Queue</div>
+            <button class="text-btn text-muted" id="clear-queue-btn">Clear</button>
+          </div>
+
+          <div class="queue-list" id="queue-items-list">
+            <!-- Up next items -->
+          </div>
+        </div>
+      </aside>
+
+    </div><!-- /app-body -->
+
+    <!-- ============================================== -->
+    <!-- FIXED BOTTOM MUSIC PLAYER -->
+    <!-- ============================================== -->
+    <footer class="bottom-player" id="bottom-player">
+
+      <!-- TOP GLOW PROGRESS BAR (THIN SCRUBBER) -->
+      <div class="player-seeker-container" id="player-seeker-container">
+        <div class="seeker-bar" id="seeker-bar">
+          <div class="seeker-buffer" id="seeker-buffer"></div>
+          <div class="seeker-progress" id="seeker-progress">
+            <div class="seeker-thumb"></div>
+          </div>
+        </div>
+        <!-- Time tooltip shown on hover -->
+        <div class="seeker-tooltip" id="seeker-tooltip">0:00</div>
+      </div>
+
+      <div class="player-inner">
+
+        <!-- LEFT: TRACK INFO & COVER -->
+        <div class="player-track-info">
+          <div class="player-art-wrap">
+            <img src="images/default-cover.jpg" alt="Current Track" class="player-cover-img" id="player-cover-img">
+            <div class="player-disc-spin" id="player-disc-spin"></div>
+          </div>
+          <div class="player-meta">
+            <div class="player-title-wrap">
+              <span class="player-title" id="player-title">Select a track</span>
+              <div class="mini-eq-bars" id="mini-eq-bars">
+                <span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+            <span class="player-artist" id="player-artist">PreZify Player</span>
+          </div>
+          <button class="icon-btn player-like-btn" id="player-like-btn" title="Add to Liked Songs">
+            <i class="bi bi-heart"></i>
+          </button>
+        </div>
+
+        <!-- CENTER: MASTER PLAYBACK CONTROLS -->
+        <div class="player-controls-center">
+          <div class="player-buttons-row">
+            <!-- Shuffle -->
+            <button class="icon-btn control-btn" id="player-shuffle-btn" title="Toggle Shuffle (S)">
+              <i class="bi bi-shuffle"></i>
+            </button>
+            <!-- Previous -->
+            <button class="icon-btn control-btn" id="player-prev-btn" title="Previous Song (Shift+P)">
+              <i class="bi bi-skip-backward-fill"></i>
+            </button>
+            <!-- Play / Pause Master Button -->
+            <button class="play-pause-btn" id="player-play-btn" title="Play/Pause (Space)">
+              <i class="bi bi-play-fill" id="player-play-icon"></i>
+            </button>
+            <!-- Next -->
+            <button class="icon-btn control-btn" id="player-next-btn" title="Next Song (Shift+N)">
+              <i class="bi bi-skip-forward-fill"></i>
+            </button>
+            <!-- Repeat -->
+            <button class="icon-btn control-btn" id="player-repeat-btn" title="Repeat Mode (R)">
+              <i class="bi bi-repeat" id="player-repeat-icon"></i>
+            </button>
+          </div>
+
+          <!-- Time Display Row -->
+          <div class="player-time-row">
+            <span class="time-text" id="player-current-time">0:00</span>
+            <div class="time-divider">/</div>
+            <span class="time-text text-muted" id="player-total-duration">0:00</span>
+          </div>
+        </div>
+
+        <!-- RIGHT: VOLUME, SPEED, LYRICS & VISUALIZER CONTROLS -->
+        <div class="player-tools-right">
+          <!-- Mini Audio Spectrum Canvas -->
+          <div class="mini-visualizer-wrap" title="Live Audio Visualizer">
+            <canvas id="player-visualizer-canvas" width="80" height="24"></canvas>
+          </div>
+
+          <!-- Speed Control -->
+          <button class="speed-badge-btn" id="player-speed-btn" title="Playback Speed">1.0x</button>
+
+          <!-- Synchronized Lyrics Button -->
+          <button class="icon-btn control-btn" id="player-lyrics-btn" title="Lyrics & Soundstage">
+            <i class="bi bi-mic-fill"></i>
+          </button>
+
+          <!-- Up Next Queue Button -->
+          <button class="icon-btn control-btn" id="player-queue-btn" title="Playing Queue">
+            <i class="bi bi-music-note-list"></i>
+            <span class="queue-count-pill" id="queue-count-pill">0</span>
+          </button>
+
+          <!-- Volume Slider Box -->
+          <div class="volume-control-box">
+            <button class="icon-btn" id="player-volume-btn" title="Mute/Unmute (M)">
+              <i class="bi bi-volume-up-fill" id="player-volume-icon"></i>
+            </button>
+            <div class="volume-slider-track" id="volume-slider-track">
+              <div class="volume-slider-fill" id="volume-slider-fill" style="width: 80%;">
+                <div class="volume-slider-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </footer>
+
+    <!-- MOBILE FLOATING BOTTOM BAR -->
+    <nav class="mobile-bottom-nav">
+      <button class="mobile-nav-btn active" data-nav="home">
+        <i class="bi bi-house-door-fill"></i>
+        <span>Home</span>
+      </button>
+      <button class="mobile-nav-btn" data-nav="discover">
+        <i class="bi bi-compass-fill"></i>
+        <span>Explore</span>
+      </button>
+      <button class="mobile-nav-btn" data-nav="search">
+        <i class="bi bi-search"></i>
+        <span>Search</span>
+      </button>
+      <button class="mobile-nav-btn" data-nav="library">
+        <i class="bi bi-collection-play-fill"></i>
+        <span>Library</span>
+      </button>
+      <button class="mobile-nav-btn" id="mobile-lyrics-nav-btn">
+        <i class="bi bi-mic-fill"></i>
+        <span>Lyrics</span>
+      </button>
+    </nav>
+
+  </div><!-- /app-shell -->
+
+  <!-- ============================================== -->
+  <!-- MODALS -->
+  <!-- ============================================== -->
+
+  <!-- MODAL 1: CREATE NEW PLAYLIST -->
+  <div class="modal-backdrop" id="create-playlist-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Create New Playlist</h3>
+        <button class="icon-btn modal-close-btn" data-close="create-playlist-modal"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="new-playlist-name">Playlist Name</label>
+          <input type="text" id="new-playlist-name" placeholder="e.g., Midnight Cyberwave Beats" maxlength="40">
+        </div>
+        <div class="form-group">
+          <label for="new-playlist-desc">Description (Optional)</label>
+          <textarea id="new-playlist-desc" rows="3" placeholder="Describe the vibe, mood, or energy..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Cover Theme Color</label>
+          <div class="theme-color-picker" id="playlist-theme-picker">
+            <span class="color-dot active" data-color="purple" style="background: linear-gradient(135deg, #8B5CF6, #6366F1);"></span>
+            <span class="color-dot" data-color="cyan" style="background: linear-gradient(135deg, #22D3EE, #0EA5E9);"></span>
+            <span class="color-dot" data-color="pink" style="background: linear-gradient(135deg, #EC4899, #F43F5E);"></span>
+            <span class="color-dot" data-color="emerald" style="background: linear-gradient(135deg, #10B981, #059669);"></span>
+            <span class="color-dot" data-color="amber" style="background: linear-gradient(135deg, #F59E0B, #D97706);"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-glass" data-close="create-playlist-modal">Cancel</button>
+        <button class="btn btn-primary" id="confirm-create-playlist-btn">Create Playlist</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD TO PLAYLIST -->
+  <div class="modal-backdrop" id="add-to-playlist-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Add to Playlist</h3>
+        <button class="icon-btn modal-close-btn" data-close="add-to-playlist-modal"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtext" id="add-track-target-name">Select destination playlist:</p>
+        <div class="playlist-select-list" id="add-to-playlist-options">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-glass" data-close="add-to-playlist-modal">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: AUDIO EQUALIZER & SETTINGS -->
+  <div class="modal-backdrop" id="settings-modal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="bi bi-sliders text-accent"></i>
+          <h3>Audio Equalizer & Experience Settings</h3>
+        </div>
+        <button class="icon-btn modal-close-btn" data-close="settings-modal"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Streaming Quality -->
+        <div class="settings-block">
+          <h4>Streaming Audio Quality</h4>
+          <p class="settings-sub">Higher fidelity streams offer uncompressed sonic detail.</p>
+          <div class="radio-cards-grid">
+            <label class="radio-card">
+              <input type="radio" name="audio-quality" value="normal">
+              <div class="radio-card-content">
+                <strong>Normal (160 kbps)</strong>
+                <span>Standard data saving</span>
+              </div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="audio-quality" value="high">
+              <div class="radio-card-content">
+                <strong>High (320 kbps MP3)</strong>
+                <span>Crisp stereo balance</span>
+              </div>
+            </label>
+            <label class="radio-card selected">
+              <input type="radio" name="audio-quality" value="lossless" checked>
+              <div class="radio-card-content">
+                <strong>Hi-Fi Lossless (96kHz / 24-bit)</strong>
+                <span class="badge-tag">Studio Master</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Real-time Equalizer Presets -->
+        <div class="settings-block mt-24">
+          <h4>PreZify DSP Equalizer Presets</h4>
+          <p class="settings-sub">Tailor real-time audio filtering dynamically via Web Audio API.</p>
+          <div class="eq-presets-row" id="eq-presets-container">
+            <button class="eq-pill active" data-preset="flat">Flat / Pure</button>
+            <button class="eq-pill" data-preset="bass">Bass Boost (+6dB)</button>
+            <button class="eq-pill" data-preset="treble">Crystal Treble</button>
+            <button class="eq-pill" data-preset="vocal">Vocal Clarity</button>
+            <button class="eq-pill" data-preset="electronic">Club EDM</button>
+          </div>
+        </div>
+
+        <!-- Crossfade duration -->
+        <div class="settings-block mt-24">
+          <div class="flex-between">
+            <h4>Playback Crossfade</h4>
+            <span class="text-accent font-bold" id="crossfade-value-label">3 seconds</span>
+          </div>
+          <p class="settings-sub">Seamlessly blend transitions between consecutive songs.</p>
+          <input type="range" min="0" max="10" value="3" class="custom-range" id="crossfade-slider">
+        </div>
+
+        <!-- Theme Accent selection -->
+        <div class="settings-block mt-24">
+          <h4>Theme Accent Color</h4>
+          <div class="theme-accent-row" id="theme-accent-row">
+            <button class="accent-choice-pill active" data-accent="purple">Royal Violet (#8B5CF6)</button>
+            <button class="accent-choice-pill" data-accent="cyan">Cyber Cyan (#22D3EE)</button>
+            <button class="accent-choice-pill" data-accent="pink">Neon Pink (#EC4899)</button>
+            <button class="accent-choice-pill" data-accent="emerald">Emerald Matrix (#10B981)</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-close="settings-modal">Save & Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: EXPLORE PREMIUM -->
+  <div class="modal-backdrop" id="premium-modal">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="bi bi-gem text-accent"></i>
+          <h3>PreZify Premium – Unlock Pure Acoustic Euphoria</h3>
+        </div>
+        <button class="icon-btn modal-close-btn" data-close="premium-modal"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="pricing-cards-container">
+
+          <!-- Plan 1: Free -->
+          <div class="pricing-card">
+            <div class="plan-header">
+              <span class="plan-badge">Standard</span>
+              <h3>PreZify Free</h3>
+              <div class="plan-price">$0 <span>/ month</span></div>
+            </div>
+            <ul class="plan-features">
+              <li><i class="bi bi-check2 text-accent"></i> Standard 160 kbps audio</li>
+              <li><i class="bi bi-check2 text-accent"></i> Shuffle play mode</li>
+              <li><i class="bi bi-check2 text-accent"></i> Curated community playlists</li>
+              <li class="feature-disabled"><i class="bi bi-x"></i> Zero ad interruptions</li>
+              <li class="feature-disabled"><i class="bi bi-x"></i> Lossless 24-bit Hi-Fi</li>
+              <li class="feature-disabled"><i class="bi bi-x"></i> Unlimited track skips</li>
+            </ul>
+            <button class="btn btn-glass w-full" disabled>Current Base Plan</button>
+          </div>
+
+          <!-- Plan 2: Pro (Highlighted) -->
+          <div class="pricing-card featured-plan">
+            <div class="popular-ribbon">MOST POPULAR</div>
+            <div class="plan-header">
+              <span class="plan-badge bg-gradient">Individual Pro</span>
+              <h3>PreZify Plus</h3>
+              <div class="plan-price">$4.99 <span>/ month</span></div>
+            </div>
+            <ul class="plan-features">
+              <li><i class="bi bi-check2-circle text-accent"></i> <strong>24-bit / 96kHz Lossless FLAC</strong></li>
+              <li><i class="bi bi-check2-circle text-accent"></i> Zero advertisements forever</li>
+              <li><i class="bi bi-check2-circle text-accent"></i> Unlimited skips & full queue control</li>
+              <li><i class="bi bi-check2-circle text-accent"></i> Dynamic spectrum visualizer</li>
+              <li><i class="bi bi-check2-circle text-accent"></i> Offline mode caching support</li>
+            </ul>
+            <button class="btn btn-primary w-full" id="upgrade-pro-btn">Upgrade to Plus</button>
+          </div>
+
+          <!-- Plan 3: Family -->
+          <div class="pricing-card">
+            <div class="plan-header">
+              <span class="plan-badge">Shared Experience</span>
+              <h3>PreZify Family</h3>
+              <div class="plan-price">$9.99 <span>/ month</span></div>
+            </div>
+            <ul class="plan-features">
+              <li><i class="bi bi-check2 text-accent"></i> Up to 6 individual Hi-Fi accounts</li>
+              <li><i class="bi bi-check2 text-accent"></i> Shared family mix playlist</li>
+              <li><i class="bi bi-check2 text-accent"></i> Explicit content filter controls</li>
+              <li><i class="bi bi-check2 text-accent"></i> Zero ads across all devices</li>
+              <li><i class="bi bi-check2 text-accent"></i> Lossless audio for everyone</li>
+            </ul>
+            <button class="btn btn-glass w-full" id="upgrade-family-btn">Upgrade Family</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Hidden Native Audio Element (managed via AudioEngine) -->
+  <audio id="prezify-audio-engine" preload="auto"></audio>
+
+  <!-- Application Logic -->
+  <script src="script.js"></script>
+</body>
+</html>
+
