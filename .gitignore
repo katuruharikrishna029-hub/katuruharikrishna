@@ -6,3 +6,5 @@ Thumbs.db
 # Editor directories
 .vscode/
 .idea/
+
+push_to_github.bat
