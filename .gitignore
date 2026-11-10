@@ -8,3 +8,5 @@ Thumbs.db
 .idea/
 
 push_to_github.bat
+
+app_payload.zip
