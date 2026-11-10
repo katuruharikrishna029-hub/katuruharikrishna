@@ -231,3 +231,4 @@ if __name__ == '__main__':
     with socketserver.TCPServer(("", PORT), PreZifyRequestHandler) as httpd:
         print(f"PreZify Python Backend running at http://localhost:{PORT}")
         httpd.serve_forever()
+

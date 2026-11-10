@@ -49,9 +49,19 @@ PreZify/
 
 ## 🚀 How to Run the Application
 
-You can run PreZify in two flexible modes:
+You can launch PreZify in any of the following ways:
 
-### Mode A: Full-Stack Mode (Backend API + Frontend)
+### 🖥️ Option 1: Native Windows Desktop App (`PreZify.exe`) - Recommended
+- Simply **double-click [`PreZify.exe`](file:///c:/Users/harik/OneDrive/Desktop/newapp/PreZify.exe)** in this folder.
+- **What it does**:
+  - Automatically launches the embedded high-performance local server with HTTP 206 audio streaming.
+  - Opens PreZify in a dedicated, frameless desktop application window (similar to the Spotify desktop app).
+  - Places a PreZify icon in the **Windows System Tray** with quick controls (Open PreZify, Open in Browser, About, Exit).
+  - No terminal, node, or python installation required!
+
+---
+
+### 🌐 Option 2: Full-Stack Mode (Node.js / Python Backend API)
 1. **Start the Backend Server**:
    - Using **Node.js**:
      ```bash
