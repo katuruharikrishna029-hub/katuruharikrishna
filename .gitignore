@@ -10,3 +10,4 @@ Thumbs.db
 push_to_github.bat
 
 app_payload.zip
+.env

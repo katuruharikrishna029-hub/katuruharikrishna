@@ -7,6 +7,22 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+// Simple .env loader (no external deps)
+const envPath = path.join(__dirname, '..', '.env');
+if (fs.existsSync(envPath)) {
+  const envLines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+  envLines.forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      const value = match[2].trim();
+      process.env[key] = value;
+    }
+  });
+}
+const fs = require('fs');
+const path = require('path');
+const url = require('url');
 
 const PORT = process.env.PORT || 5000;
 const DATA_DIR = path.join(__dirname, 'data');
