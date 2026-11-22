@@ -207,7 +207,7 @@ const TRACKS_DATABASE = [
     album: 'Divine Beats 2026',
     genre: 'Melody / Indian',
     audioSrc: 'songs/song9.mp3',
-    cover: 'images/cover3.jpg',
+    cover: 'images/my-photo-new.jpg',
     plays: '2,480,100',
     duration: 212,
     year: 2026,
