@@ -177,6 +177,28 @@ const TRACKS_DATABASE = [
       { time: 95, text: "Smoke on the asphalt, tires screeching loud" },
       { time: 110, text: "♪ (Slow fade out with dark atmospheric synth) ♪" }
     ]
+  },
+  {
+    id: 'track-8',
+    title: 'Run Phonk Energy (Night Edition)',
+    artist: 'Mickeyscat',
+    album: 'Phonk Drift 2026',
+    genre: 'Drift Phonk',
+    audioSrc: 'songs/song8.mp3',
+    cover: 'images/cover2.jpg',
+    plays: '1,850,200',
+    duration: 190,
+    year: 2026,
+    lyrics: [
+      { time: 0, text: "♪ (Heavy bass drop & aggressive phonk rhythm) ♪" },
+      { time: 15, text: "Midnight runners speeding through the rain" },
+      { time: 35, text: "Night Edition overdrive, breaking through the pain" },
+      { time: 60, text: "Feel the engine roar under neon sky" },
+      { time: 90, text: "♪ (Dark phonk cowbell solo & distorted 808 drop) ♪" },
+      { time: 130, text: "Push the limits, never slowing down" },
+      { time: 165, text: "PreZify sound echoes across the town" },
+      { time: 180, text: "♪ (Smooth outro fade) ♪" }
+    ]
   }
 ];
 
