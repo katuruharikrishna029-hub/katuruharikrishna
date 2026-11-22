@@ -221,6 +221,28 @@ const TRACKS_DATABASE = [
       { time: 160, text: "Peaceful resonance echoing through time" },
       { time: 200, text: "♪ (Peaceful closing flute outro) ♪" }
     ]
+  },
+  {
+    id: 'track-10',
+    title: 'Radhimaa (Music Video Version)',
+    artist: 'Vivek & Thejo Bharathwaj ft. Bhagyashri Borse',
+    album: 'Radhimaa Official Soundtrack',
+    genre: 'Soundtrack / Indian Pop',
+    audioSrc: 'songs/song10.mp3',
+    cover: 'images/my-photo-new.jpg',
+    plays: '3,890,400',
+    duration: 185,
+    year: 2026,
+    lyrics: [
+      { time: 0, text: "♪ (Official music video melodic overture) ♪" },
+      { time: 15, text: "Heartbeats synchronizing with the melody" },
+      { time: 35, text: "Bhagyashri Borse & Vivek — timeless love harmony" },
+      { time: 60, text: "Thejo Bharathwaj rhythm bringing smiles across" },
+      { time: 90, text: "♪ (Vibrant emotional chorus drop) ♪" },
+      { time: 120, text: "Radhimaa... streaming in lossless Hi-Fi on PreZify" },
+      { time: 155, text: "Every beat, every note, pure magic" },
+      { time: 175, text: "♪ (Orchestral cinematic finale) ♪" }
+    ]
   }
 ];
 
