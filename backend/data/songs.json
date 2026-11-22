@@ -188,6 +188,28 @@
       { "time": 165, "text": "PreZify sound echoes across the town" },
       { "time": 180, "text": "♪ (Smooth outro fade) ♪" }
     ]
+  },
+  {
+    "id": "track-9",
+    "title": "Radhimaa",
+    "artist": "PreZify Devotional & Melody",
+    "album": "Divine Beats 2026",
+    "genre": "Melody / Indian",
+    "audioSrc": "songs/song9.mp3",
+    "cover": "images/cover3.jpg",
+    "plays": "2,480,100",
+    "duration": 212,
+    "year": 2026,
+    "lyrics": [
+      { "time": 0, "text": "♪ (Soulful melodic intro & acoustic flute) ♪" },
+      { "time": 12, "text": "Radhimaa... sacred rhythm in the breeze" },
+      { "time": 30, "text": "Melodies that put the heart and soul at ease" },
+      { "time": 55, "text": "A journey through the divine harmonies" },
+      { "time": 85, "text": "♪ (Grand instrumental crescendo & rhythm) ♪" },
+      { "time": 120, "text": "Feel every beat... live every moment with Radhimaa" },
+      { "time": 160, "text": "Peaceful resonance echoing through time" },
+      { "time": 200, "text": "♪ (Peaceful closing flute outro) ♪" }
+    ]
   }
 ]
 
