@@ -22,7 +22,7 @@ if (fs.existsSync(envPath)) {
 }
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
+
 
 const PORT = process.env.PORT || 5000;
 const DATA_DIR = path.join(__dirname, 'data');
