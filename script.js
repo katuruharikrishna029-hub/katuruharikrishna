@@ -155,6 +155,28 @@ const TRACKS_DATABASE = [
       { time: 86, text: "PreZify hyper-drive activated" },
       { time: 96, text: "♪ (Glitch fade & cosmic echo) ♪" }
     ]
+  },
+  {
+    id: 'track-7',
+    title: 'Run Phonk Energy',
+    artist: 'Mickeyscat',
+    album: 'Phonk Drift 2026',
+    genre: 'Drift Phonk',
+    audioSrc: 'songs/song7.mp3',
+    cover: 'images/my-photo.jpg',
+    plays: '3,142,500',
+    duration: 120, // 2:00
+    year: 2026,
+    lyrics: [
+      { time: 0, text: "♪ (Cowbell melody & heavy 808 distortion) ♪" },
+      { time: 10, text: "Drifting through the midnight neon rain" },
+      { time: 25, text: "Adrenaline rushing straight into the vein" },
+      { time: 40, text: "Run phonk energy, feeling the raw speed" },
+      { time: 55, text: "PreZify bass is all that you need" },
+      { time: 75, text: "♪ (Aggressive phonk drop & distorted 808s) ♪" },
+      { time: 95, text: "Smoke on the asphalt, tires screeching loud" },
+      { time: 110, text: "♪ (Slow fade out with dark atmospheric synth) ♪" }
+    ]
   }
 ];
 
