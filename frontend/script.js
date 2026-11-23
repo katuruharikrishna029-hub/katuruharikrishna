@@ -1698,11 +1698,12 @@ class PreZifyApp {
   }
 
   /* ==========================================================================
-     SEARCH ENGINE
+     SEARCH ENGINE (LOCAL + GLOBAL ONLINE STREAMING API)
      ========================================================================== */
 
-  performSearch(query) {
-    this.state.searchQuery = query.trim().toLowerCase();
+  async performSearch(query) {
+    const rawQuery = query.trim();
+    this.state.searchQuery = rawQuery.toLowerCase();
     const heading = document.getElementById('search-results-heading');
     const sub = document.getElementById('search-results-sub');
     const emptyState = document.getElementById('search-empty-state');
@@ -1718,31 +1719,96 @@ class PreZifyApp {
       return;
     }
 
-    heading.textContent = `Results for "${query}"`;
+    heading.textContent = `Results for "${rawQuery}"`;
     emptyState.classList.add('hidden');
     activeContent.style.display = 'block';
 
-    // Match tracks
-    const matchedTracks = TRACKS_DATABASE.filter(t =>
+    // 1. Match local tracks first
+    let matchedTracks = TRACKS_DATABASE.filter(t =>
       t.title.toLowerCase().includes(this.state.searchQuery) ||
       t.artist.toLowerCase().includes(this.state.searchQuery) ||
       t.album.toLowerCase().includes(this.state.searchQuery) ||
       t.genre.toLowerCase().includes(this.state.searchQuery)
     );
 
+    // Initial render with local matches
+    this.renderSearchResults(matchedTracks, topMatchContainer, tbody, true);
+
+    // 2. Fetch live global tracks from Apple / iTunes Cloud Streaming API
+    try {
+      const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(rawQuery)}&entity=song&limit=25`);
+      if (response.ok) {
+        const json = await response.json();
+        if (json.results && json.results.length > 0) {
+          const globalTracks = json.results.map(item => {
+            // High-res cover image
+            const hdCover = item.artworkUrl100 
+              ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg') 
+              : 'images/cover1.jpg';
+
+            const trackObj = {
+              id: `cloud-${item.trackId}`,
+              title: item.trackName || 'Unknown Title',
+              artist: item.artistName || 'Unknown Artist',
+              album: item.collectionName || 'Single',
+              genre: item.primaryGenreName || 'Music',
+              audioSrc: item.previewUrl,
+              cover: hdCover,
+              plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
+              duration: Math.round((item.trackTimeMillis || 30000) / 1000),
+              year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
+              isCloud: true,
+              lyrics: [
+                { time: 0, text: `♪ Now Streaming: ${item.trackName} ♪` },
+                { time: 5, text: `Artist: ${item.artistName}` },
+                { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
+                { time: 15, text: `PreZify Global Hi-Fi Stream` },
+                { time: 25, text: `♪ Feel every beat... live every moment ♪` }
+              ]
+            };
+
+            // Register into TRACKS_DATABASE if not already there
+            if (!TRACKS_DATABASE.some(t => t.id === trackObj.id)) {
+              TRACKS_DATABASE.push(trackObj);
+            }
+            return trackObj;
+          });
+
+          // Merge local and global tracks (avoid duplicates)
+          const allResults = [...matchedTracks];
+          globalTracks.forEach(gt => {
+            if (!allResults.some(r => r.id === gt.id)) {
+              allResults.push(gt);
+            }
+          });
+
+          this.renderSearchResults(allResults, topMatchContainer, tbody, false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Online cloud search error:', err);
+    }
+
+    if (matchedTracks.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No online tracks found for "${rawQuery}". Check your internet connection or try another keyword.</td></tr>`;
+    }
+  }
+
+  renderSearchResults(tracks, topMatchContainer, tbody, isLoadingMore) {
     // Render Top Match
     topMatchContainer.innerHTML = '';
-    if (matchedTracks.length > 0) {
-      const top = matchedTracks[0];
+    if (tracks.length > 0) {
+      const top = tracks[0];
       const topCard = document.createElement('div');
       topCard.className = 'top-match-card';
       topCard.innerHTML = `
-        <span class="top-match-tag">TOP RESULT</span>
+        <span class="top-match-tag">${top.isCloud ? 'GLOBAL STREAM' : 'TOP RESULT'}</span>
         <div class="top-match-content">
-          <img src="${top.cover}" alt="${top.title}" class="top-match-img">
+          <img src="${top.cover}" alt="${top.title}" class="top-match-img" onerror="this.src='images/cover1.jpg'">
           <div class="top-match-info">
             <h3>${top.title}</h3>
-            <p>${top.artist} • Song</p>
+            <p>${top.artist} • ${top.isCloud ? 'Global Cloud' : 'Song'}</p>
           </div>
           <button class="card-play-fab" style="opacity:1; transform:none; position:static; margin-left:auto;">
             <i class="bi bi-play-fill"></i>
@@ -1755,10 +1821,14 @@ class PreZifyApp {
 
     // Render Table Rows
     tbody.innerHTML = '';
-    if (matchedTracks.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No tracks found matching "${query}". Try searching for Synthwave, Lo-Fi, or Aura Beats.</td></tr>`;
+    if (tracks.length === 0) {
+      if (isLoadingMore) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-accent" style="text-align:center; padding:30px;"><div class="spinner-border spinner-border-sm me-2"></div> Searching global music catalog online...</td></tr>`;
+      } else {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No tracks found.</td></tr>`;
+      }
     } else {
-      matchedTracks.forEach((t, i) => {
+      tracks.forEach((t, i) => {
         tbody.appendChild(this.createTrackTableRow(t, i + 1));
       });
     }
