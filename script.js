@@ -520,8 +520,15 @@ class PreZifyAudioEngine {
   loadTrack(track, autoPlay = true) {
     if (!track) return;
     this.stopSynthFallback();
+    
+    // For online cloud streams (CORS audio), remove crossOrigin or set to anonymous safely
+    if (track.isCloud || (track.audioSrc && track.audioSrc.startsWith('http'))) {
+      this.audio.removeAttribute('crossorigin');
+    }
+
     this.audio.src = track.audioSrc;
     this.audio.playbackRate = this.state.playbackRate;
+    this.audio.load();
 
     if (autoPlay) {
       this.play();
@@ -529,16 +536,23 @@ class PreZifyAudioEngine {
   }
 
   play() {
-    this.ensureWebAudio();
+    // Only connect WebAudio analyser if track is local to avoid CORS silence
+    const isCloud = this.state.currentTrack && (this.state.currentTrack.isCloud || (this.state.currentTrack.audioSrc && this.state.currentTrack.audioSrc.startsWith('http')));
+    if (!isCloud) {
+      this.ensureWebAudio();
+    }
+
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
       this.audioCtx.resume();
     }
 
     const playPromise = this.audio.play();
     if (playPromise !== undefined) {
-      playPromise.catch(err => {
-        console.warn('Autoplay prevented or network blocked. User interaction needed or synth fallback:', err);
-        // Will start when user clicks
+      playPromise.then(() => {
+        this.state.isPlaying = true;
+        if (this.onStateChange) this.onStateChange('play');
+      }).catch(err => {
+        console.warn('Autoplay prevented or network blocked. User interaction needed:', err);
       });
     }
   }
