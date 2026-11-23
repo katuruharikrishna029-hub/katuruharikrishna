@@ -2048,6 +2048,11 @@ class PreZifyApp {
       this.showToast('Playing all Trending Songs', 'cyan');
     });
 
+    // Refresh Live Global Music
+    document.getElementById('refresh-global-music-btn').addEventListener('click', () => {
+      this.loadLiveGlobalMusic();
+    });
+
     // Liked Songs Hero Actions
     document.getElementById('liked-play-all-btn').addEventListener('click', () => {
       const liked = TRACKS_DATABASE.filter(t => this.state.likedSongIds.has(t.id));

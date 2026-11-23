@@ -782,6 +782,7 @@ class PreZifyApp {
 
       // Containers
       trendingContainer: document.getElementById('trending-songs-container'),
+      liveGlobalContainer: document.getElementById('live-global-music-container'),
       curatedPlaylistsContainer: document.getElementById('curated-playlists-container'),
       popularArtistsContainer: document.getElementById('popular-artists-container'),
       recommendedAlbumsContainer: document.getElementById('recommended-albums-container'),
@@ -827,9 +828,14 @@ class PreZifyApp {
       if (serverTracks) {
         const rateLabel = document.getElementById('engine-rate-label');
         if (rateLabel) rateLabel.textContent = 'REST API Backend Online';
+        serverTracks.forEach(track => {
+          if (!TRACKS_DATABASE.some(t => t.id === track.id)) TRACKS_DATABASE.push(track);
+        });
         this.showToast('PreZify REST API Server Connected', 'cyan');
+        this.renderTrendingSongs(this.state.activeGenre);
       }
     });
+    this.loadLiveGlobalMusic();
 
     console.log('PreZify Audio Streaming Platform initialized successfully.');
   }
@@ -850,6 +856,89 @@ class PreZifyApp {
 
     // Recommended Albums
     this.renderRecommendedAlbums();
+  }
+
+  createGlobalTrack(item) {
+    const hdCover = item.artworkUrl100
+      ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg')
+      : 'images/cover1.jpg';
+
+    return {
+      id: `cloud-${item.trackId}`,
+      title: item.trackName || 'Unknown Title',
+      artist: item.artistName || 'Unknown Artist',
+      album: item.collectionName || 'Single',
+      genre: item.primaryGenreName || 'Music',
+      audioSrc: item.previewUrl,
+      cover: hdCover,
+      plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
+      duration: Math.round((item.trackTimeMillis || 30000) / 1000),
+      year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
+      isCloud: true,
+      lyrics: [
+        { time: 0, text: `♪ Now Streaming: ${item.trackName || 'Unknown Title'} ♪` },
+        { time: 5, text: `Artist: ${item.artistName || 'Unknown Artist'}` },
+        { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
+        { time: 15, text: 'PreZify Global Hi-Fi Stream' },
+        { time: 25, text: '♪ Feel every beat... live every moment ♪' }
+      ]
+    };
+  }
+
+  async loadLiveGlobalMusic() {
+    if (!this.dom.liveGlobalContainer) return;
+    this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted" id="global-music-loading">Loading live global music...</div>';
+
+    const terms = ['top hits 2026', 'new pop', 'dance music', 'lofi', 'indian music', 'synthwave'];
+    const term = terms[Math.floor(Math.random() * terms.length)];
+    try {
+      const proxyUrl = this.apiClient.isOnline
+        ? `${this.apiClient.apiBase}/api/global/search?q=${encodeURIComponent(term)}&limit=24`
+        : `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=24`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error(`Global music request failed (${response.status})`);
+
+      const json = await response.json();
+      const results = json.results || json.data || [];
+      const tracks = results
+        .filter(item => item.previewUrl)
+        .map(item => this.createGlobalTrack(item));
+
+      tracks.forEach(track => {
+        if (!TRACKS_DATABASE.some(t => t.id === track.id)) TRACKS_DATABASE.push(track);
+      });
+
+      if (tracks.length === 0) {
+        this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted">No live preview tracks are available right now.</div>';
+        return;
+      }
+
+      this.dom.liveGlobalContainer.innerHTML = '';
+      tracks.slice(0, 12).forEach(track => {
+        const card = document.createElement('div');
+        card.className = 'music-card';
+        card.innerHTML = `
+          <div class="card-img-wrap">
+            <img src="${track.cover}" alt="${track.title}" class="card-cover-img" onerror="this.src='images/cover1.jpg'">
+            <button class="card-play-fab" title="Play ${track.title}">
+              <i class="bi bi-play-fill"></i>
+            </button>
+          </div>
+          <h4 class="card-title">${track.title}</h4>
+          <p class="card-desc">${track.artist}</p>
+        `;
+        card.addEventListener('click', () => this.playTrackById(track.id));
+        const fab = card.querySelector('.card-play-fab');
+        fab.addEventListener('click', e => {
+          e.stopPropagation();
+          this.playTrackById(track.id);
+        });
+        this.dom.liveGlobalContainer.appendChild(card);
+      });
+    } catch (err) {
+      console.warn('Live global music unavailable:', err);
+      this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted">Live global music could not be loaded. Try refresh.</div>';
+    }
   }
 
   renderTrendingSongs(genreFilter = 'All') {
@@ -1957,6 +2046,11 @@ class PreZifyApp {
       this.state.queue = [...TRACKS_DATABASE];
       this.playTrackById(TRACKS_DATABASE[0].id);
       this.showToast('Playing all Trending Songs', 'cyan');
+    });
+
+    // Refresh Live Global Music
+    document.getElementById('refresh-global-music-btn').addEventListener('click', () => {
+      this.loadLiveGlobalMusic();
     });
 
     // Liked Songs Hero Actions
