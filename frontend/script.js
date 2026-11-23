@@ -805,6 +805,9 @@ class PreZifyApp {
     // 5. Apply saved theme accent
     this.applyAccentTheme(this.state.settings.accent || 'purple');
 
+    // 5b. Initialize Authentication System
+    this.initAuth();
+
     // 6. Check for live Backend REST API
     this.apiClient.init().then(serverTracks => {
       if (serverTracks) {
@@ -2310,6 +2313,227 @@ class PreZifyApp {
       toast.style.animation = 'toastOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
       setTimeout(() => toast.remove(), 300);
     }, 2800);
+  }
+
+  /* ==========================================================================
+     AUTHENTICATION SYSTEM (SPOTIFY / GOOGLE / CREDENTIALS)
+     ========================================================================== */
+
+  initAuth() {
+    this.authModal = document.getElementById('auth-modal');
+    this.authModalTitle = document.getElementById('auth-modal-title');
+    this.authModalSubtitle = document.getElementById('auth-modal-subtitle');
+    this.authForm = document.getElementById('auth-form');
+    this.authInputName = document.getElementById('auth-input-name');
+    this.authInputEmail = document.getElementById('auth-input-email');
+    this.authInputPassword = document.getElementById('auth-input-password');
+    this.groupAuthName = document.getElementById('group-auth-name');
+    this.authSubmitBtn = document.getElementById('auth-submit-btn');
+    this.authSwitchModeBtn = document.getElementById('auth-switch-mode-btn');
+    this.authTogglePrompt = document.getElementById('auth-toggle-prompt');
+    this.authModalClose = document.getElementById('auth-modal-close');
+
+    this.navLoginBtn = document.getElementById('nav-login-btn');
+    this.navSignupBtn = document.getElementById('nav-signup-btn');
+    this.authButtonsGroup = document.getElementById('auth-buttons-group');
+    this.profileWrapper = document.getElementById('profile-wrapper');
+    this.logoutBtn = document.getElementById('logout-btn');
+
+    this.isSignUpMode = false;
+
+    // Load active session from localStorage
+    const savedUser = localStorage.getItem('prezify_auth_user');
+    if (savedUser) {
+      try {
+        this.currentUser = JSON.parse(savedUser);
+      } catch (e) {
+        this.currentUser = null;
+      }
+    } else {
+      this.currentUser = null;
+    }
+
+    this.updateAuthUI();
+
+    // Event Listeners
+    if (this.navLoginBtn) {
+      this.navLoginBtn.addEventListener('click', () => this.openAuthModal(false));
+    }
+    if (this.navSignupBtn) {
+      this.navSignupBtn.addEventListener('click', () => this.openAuthModal(true));
+    }
+    if (this.authModalClose) {
+      this.authModalClose.addEventListener('click', () => this.closeAuthModal());
+    }
+
+    if (this.authSwitchModeBtn) {
+      this.authSwitchModeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggleAuthMode();
+      });
+    }
+
+    // Toggle password visibility
+    const togglePwdBtn = document.getElementById('btn-toggle-pwd');
+    if (togglePwdBtn && this.authInputPassword) {
+      togglePwdBtn.addEventListener('click', () => {
+        const isPwd = this.authInputPassword.type === 'password';
+        this.authInputPassword.type = isPwd ? 'text' : 'password';
+        togglePwdBtn.innerHTML = isPwd ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+      });
+    }
+
+    // Social Auth Handlers
+    const googleBtn = document.getElementById('btn-auth-google');
+    if (googleBtn) {
+      googleBtn.addEventListener('click', () => this.handleSocialAuth('Google'));
+    }
+    const spotifyBtn = document.getElementById('btn-auth-spotify');
+    if (spotifyBtn) {
+      spotifyBtn.addEventListener('click', () => this.handleSocialAuth('Spotify'));
+    }
+    const appleBtn = document.getElementById('btn-auth-apple');
+    if (appleBtn) {
+      appleBtn.addEventListener('click', () => this.handleSocialAuth('Apple'));
+    }
+
+    // Form Submit
+    if (this.authForm) {
+      this.authForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleCredentialsAuth();
+      });
+    }
+
+    // Logout button
+    if (this.logoutBtn) {
+      this.logoutBtn.addEventListener('click', () => this.handleLogout());
+    }
+
+    // If user is not logged in, prompt sign-in after 2 seconds
+    if (!this.currentUser) {
+      setTimeout(() => {
+        const hasPrompted = sessionStorage.getItem('prezify_auth_prompted');
+        if (!hasPrompted) {
+          sessionStorage.setItem('prezify_auth_prompted', 'true');
+          this.openAuthModal(false);
+        }
+      }, 1500);
+    }
+  }
+
+  openAuthModal(isSignUp = false) {
+    this.isSignUpMode = isSignUp;
+    this.setAuthMode(isSignUp);
+    if (this.authModal) {
+      this.authModal.classList.add('show');
+    }
+  }
+
+  closeAuthModal() {
+    if (this.authModal) {
+      this.authModal.classList.remove('show');
+    }
+  }
+
+  toggleAuthMode() {
+    this.isSignUpMode = !this.isSignUpMode;
+    this.setAuthMode(this.isSignUpMode);
+  }
+
+  setAuthMode(isSignUp) {
+    if (isSignUp) {
+      this.authModalTitle.textContent = 'Sign up for PreZify';
+      this.authModalSubtitle.textContent = 'Join millions streaming lossless audio worldwide.';
+      this.groupAuthName.style.display = 'block';
+      this.authSubmitBtn.querySelector('span').textContent = 'Create Account';
+      this.authTogglePrompt.innerHTML = `Already have an account? <a href="#" class="text-accent fw-bold" id="auth-switch-mode-btn">Log in here</a>`;
+    } else {
+      this.authModalTitle.textContent = 'Log in to PreZify';
+      this.authModalSubtitle.textContent = 'Feel Every Beat. Live Every Moment.';
+      this.groupAuthName.style.display = 'none';
+      this.authSubmitBtn.querySelector('span').textContent = 'Log In';
+      this.authTogglePrompt.innerHTML = `Don't have an account? <a href="#" class="text-accent fw-bold" id="auth-switch-mode-btn">Sign up for PreZify</a>`;
+    }
+
+    // Re-bind the switch button since innerHTML was updated
+    const switchBtn = document.getElementById('auth-switch-mode-btn');
+    if (switchBtn) {
+      switchBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggleAuthMode();
+      });
+    }
+  }
+
+  handleSocialAuth(provider) {
+    const defaultName = provider === 'Google' ? 'Harikrishna (Google)' : provider === 'Spotify' ? 'Harikrishna (Spotify)' : 'Harikrishna User';
+    const email = `harikrishna.${provider.toLowerCase()}@prezify.stream`;
+    const avatar = 'images/my-photo-new.jpg';
+
+    this.currentUser = {
+      name: defaultName,
+      email: email,
+      avatar: avatar,
+      provider: provider
+    };
+
+    localStorage.setItem('prezify_auth_user', JSON.stringify(this.currentUser));
+    this.updateAuthUI();
+    this.closeAuthModal();
+    this.showToast(`Logged in successfully with ${provider}!`, 'cyan');
+  }
+
+  handleCredentialsAuth() {
+    const email = this.authInputEmail ? this.authInputEmail.value.trim() : '';
+    const name = this.isSignUpMode && this.authInputName && this.authInputName.value.trim() 
+      ? this.authInputName.value.trim() 
+      : email.split('@')[0] || 'Harikrishna';
+
+    this.currentUser = {
+      name: name,
+      email: email,
+      avatar: 'images/my-photo-new.jpg',
+      provider: 'email'
+    };
+
+    localStorage.setItem('prezify_auth_user', JSON.stringify(this.currentUser));
+    this.updateAuthUI();
+    this.closeAuthModal();
+    this.showToast(this.isSignUpMode ? `Welcome to PreZify, ${name}!` : `Welcome back, ${name}!`, 'cyan');
+  }
+
+  handleLogout() {
+    this.currentUser = null;
+    localStorage.removeItem('prezify_auth_user');
+    this.updateAuthUI();
+    this.showToast('Logged out of PreZify profile.', 'purple');
+    this.openAuthModal(false);
+  }
+
+  updateAuthUI() {
+    const navProfileName = document.getElementById('nav-profile-name');
+    const cardProfileName = document.getElementById('card-profile-name');
+    const cardProfileEmail = document.getElementById('card-profile-email');
+    const navProfileAvatar = document.getElementById('nav-profile-avatar');
+    const cardProfileAvatar = document.getElementById('card-profile-avatar');
+
+    if (this.currentUser) {
+      // User is logged in
+      if (this.authButtonsGroup) this.authButtonsGroup.style.display = 'none';
+      if (this.profileWrapper) this.profileWrapper.style.display = 'block';
+
+      if (navProfileName) navProfileName.textContent = this.currentUser.name;
+      if (cardProfileName) cardProfileName.textContent = this.currentUser.name;
+      if (cardProfileEmail) cardProfileEmail.textContent = this.currentUser.email;
+
+      if (navProfileAvatar && this.currentUser.avatar) navProfileAvatar.src = this.currentUser.avatar;
+      if (cardProfileAvatar && this.currentUser.avatar) cardProfileAvatar.src = this.currentUser.avatar;
+    } else {
+      // User is logged out
+      if (this.authButtonsGroup) this.authButtonsGroup.style.display = 'flex';
+      if (this.profileWrapper) this.profileWrapper.style.display = 'none';
+    }
   }
 
   formatTime(seconds) {

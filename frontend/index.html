@@ -105,20 +105,25 @@
           </div>
         </div>
 
-        <!-- User Profile Dropdown -->
-        <div class="profile-wrapper">
+        <!-- User Profile Dropdown / Auth Buttons -->
+        <div class="auth-buttons-group" id="auth-buttons-group" style="display: none;">
+          <button class="btn btn-glass btn-sm" id="nav-login-btn">Log in</button>
+          <button class="btn btn-primary btn-sm" id="nav-signup-btn">Sign up</button>
+        </div>
+
+        <div class="profile-wrapper" id="profile-wrapper">
           <button class="profile-btn" id="profile-toggle" aria-label="User Profile Menu">
-            <img src="images/artist1.jpg" alt="User Avatar" class="profile-avatar">
-            <span class="profile-name">Alex River</span>
+            <img src="images/my-photo-new.jpg" alt="User Avatar" class="profile-avatar" id="nav-profile-avatar">
+            <span class="profile-name" id="nav-profile-name">Harikrishna</span>
             <i class="bi bi-chevron-down profile-chevron"></i>
           </button>
           <!-- Profile Dropdown Popover -->
           <div class="dropdown-popover profile-popover" id="profile-popover">
             <div class="popover-user-card">
-              <img src="images/artist1.jpg" alt="Alex River" class="user-card-avatar">
+              <img src="images/my-photo-new.jpg" alt="Harikrishna" class="user-card-avatar" id="card-profile-avatar">
               <div class="user-card-info">
-                <strong>Alex River</strong>
-                <span>alex.river@prezify.stream</span>
+                <strong id="card-profile-name">Harikrishna</strong>
+                <span id="card-profile-email">harikrishna@prezify.stream</span>
                 <span class="badge-tier">PreZify Hi-Fi Member</span>
               </div>
             </div>
@@ -128,7 +133,7 @@
               <li><button class="menu-item" data-action="open-settings"><i class="bi bi-sliders"></i> Audio Equalizer & Settings</button></li>
               <li><button class="menu-item" data-action="open-premium"><i class="bi bi-gem"></i> Subscription Plan</button></li>
               <li class="popover-divider"></li>
-              <li><button class="menu-item text-danger" id="logout-btn"><i class="bi bi-box-arrow-right"></i> Switch Profile</button></li>
+              <li><button class="menu-item text-danger" id="logout-btn"><i class="bi bi-box-arrow-right"></i> Log out / Switch Account</button></li>
             </ul>
           </div>
         </div>
@@ -1085,6 +1090,92 @@
           </div>
 
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPOTIFY-STYLE AUTH MODAL (LOGIN / SIGNUP / GOOGLE) -->
+  <div class="modal-backdrop" id="auth-modal">
+    <div class="modal-dialog auth-dialog">
+      <button class="modal-close-btn" id="auth-modal-close"><i class="bi bi-x-lg"></i></button>
+
+      <div class="auth-header text-center">
+        <div class="logo-box mb-3" style="display: inline-flex; justify-content: center;">
+          <img src="images/logo.png" alt="PreZify Logo" class="brand-logo" style="width: 48px; height: 48px;">
+        </div>
+        <h2 class="auth-title" id="auth-modal-title">Log in to PreZify</h2>
+        <p class="text-secondary" id="auth-modal-subtitle">Feel Every Beat. Live Every Moment.</p>
+      </div>
+
+      <!-- Quick Social Auth Buttons -->
+      <div class="social-auth-group">
+        <button class="btn btn-social btn-google" id="btn-auth-google">
+          <svg width="20" height="20" viewBox="0 0 48 48" class="social-icon">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+
+        <button class="btn btn-social btn-spotify" id="btn-auth-spotify">
+          <i class="bi bi-spotify social-icon" style="color: #1DB954; font-size: 20px;"></i>
+          <span>Continue with Spotify</span>
+        </button>
+
+        <button class="btn btn-social btn-apple" id="btn-auth-apple">
+          <i class="bi bi-apple social-icon" style="font-size: 20px;"></i>
+          <span>Continue with Apple</span>
+        </button>
+      </div>
+
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+
+      <!-- Credentials Form -->
+      <form class="auth-form" id="auth-form">
+        <div class="form-group" id="group-auth-name" style="display: none;">
+          <label class="form-label" for="auth-input-name">Your Full Name</label>
+          <div class="input-icon-wrapper">
+            <i class="bi bi-person"></i>
+            <input type="text" id="auth-input-name" class="form-input" placeholder="e.g. Harikrishna">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="auth-input-email">Email or Username</label>
+          <div class="input-icon-wrapper">
+            <i class="bi bi-envelope"></i>
+            <input type="email" id="auth-input-email" class="form-input" placeholder="name@domain.com" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0" for="auth-input-password">Password</label>
+            <a href="#" class="text-xs text-accent" id="btn-forgot-password">Forgot password?</a>
+          </div>
+          <div class="input-icon-wrapper">
+            <i class="bi bi-lock"></i>
+            <input type="password" id="auth-input-password" class="form-input" placeholder="••••••••" required>
+            <button type="button" class="btn-toggle-pwd" id="btn-toggle-pwd" aria-label="Toggle Password Visibility">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block auth-submit-btn" id="auth-submit-btn">
+          <span>Log In</span>
+        </button>
+      </form>
+
+      <div class="auth-footer text-center">
+        <p class="text-muted text-sm" id="auth-toggle-prompt">
+          Don't have an account? 
+          <a href="#" class="text-accent fw-bold" id="auth-switch-mode-btn">Sign up for PreZify</a>
+        </p>
       </div>
     </div>
   </div>
