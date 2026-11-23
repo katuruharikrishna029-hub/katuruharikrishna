@@ -1748,14 +1748,24 @@ class PreZifyApp {
     // Initial render with local matches
     this.renderSearchResults(matchedTracks, topMatchContainer, tbody, true);
 
-    // 2. Fetch live global tracks from Apple / iTunes Cloud Streaming API
+    // 2. Dual Global Cloud Streaming Engines:
+    // Engine A: Apple Music Global Cloud API (Pop / Bollywood / Global Hits)
+    // Engine B: Radio Browser Live Stations & Streaming Engine (Live 24/7 Lo-Fi, Phonk, EDM, Rock, Jazz Stations)
     try {
-      const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(rawQuery)}&entity=song&limit=25`);
-      if (response.ok) {
-        const json = await response.json();
+      const [itunesRes, radioRes] = await Promise.allSettled([
+        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(rawQuery)}&entity=song&limit=25`),
+        fetch(`https://de1.api.radio-browser.info/json/stations/search?name=${encodeURIComponent(rawQuery)}&limit=10`, {
+          headers: { 'User-Agent': 'PreZifyMusic/2.0' }
+        })
+      ]);
+
+      const globalTracks = [];
+
+      // Process Engine A (Apple Music Tracks)
+      if (itunesRes.status === 'fulfilled' && itunesRes.value.ok) {
+        const json = await itunesRes.value.json();
         if (json.results && json.results.length > 0) {
-          const globalTracks = json.results.map(item => {
-            // High-res cover image
+          json.results.forEach(item => {
             const hdCover = item.artworkUrl100 
               ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg') 
               : 'images/cover1.jpg';
@@ -1772,36 +1782,75 @@ class PreZifyApp {
               duration: Math.round((item.trackTimeMillis || 30000) / 1000),
               year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
               isCloud: true,
+              engine: 'Apple Music Cloud',
               lyrics: [
                 { time: 0, text: `♪ Now Streaming: ${item.trackName} ♪` },
                 { time: 5, text: `Artist: ${item.artistName}` },
                 { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
-                { time: 15, text: `PreZify Global Hi-Fi Stream` },
+                { time: 15, text: `PreZify Global Hi-Fi Stream (Engine A)` },
                 { time: 25, text: `♪ Feel every beat... live every moment ♪` }
               ]
             };
 
-            // Register into TRACKS_DATABASE if not already there
             if (!TRACKS_DATABASE.some(t => t.id === trackObj.id)) {
               TRACKS_DATABASE.push(trackObj);
             }
-            return trackObj;
+            globalTracks.push(trackObj);
           });
-
-          // Merge local and global tracks (avoid duplicates)
-          const allResults = [...matchedTracks];
-          globalTracks.forEach(gt => {
-            if (!allResults.some(r => r.id === gt.id)) {
-              allResults.push(gt);
-            }
-          });
-
-          this.renderSearchResults(allResults, topMatchContainer, tbody, false);
-          return;
         }
       }
+
+      // Process Engine B (Radio Browser 24/7 Live Stations)
+      if (radioRes.status === 'fulfilled' && radioRes.value.ok) {
+        const radioJson = await radioRes.value.json();
+        if (Array.isArray(radioJson) && radioJson.length > 0) {
+          radioJson.forEach(st => {
+            const streamUrl = st.url_resolved || st.url;
+            if (!streamUrl) return;
+
+            const stationTrack = {
+              id: `live-${st.stationuuid}`,
+              title: st.name.trim() || `${rawQuery} Live Stream`,
+              artist: `24/7 Live Radio (${st.country || 'Global'})`,
+              album: st.tags ? st.tags.split(',').slice(0, 3).join(', ') : 'Live Broadcast',
+              genre: st.tags ? st.tags.split(',')[0].toUpperCase() : 'LIVE',
+              audioSrc: streamUrl,
+              cover: st.favicon && st.favicon.startsWith('http') ? st.favicon : 'images/cover2.jpg',
+              plays: '🔴 LIVE NOW',
+              duration: 3600, // 1 hour live stream
+              year: 2026,
+              isCloud: true,
+              isLive: true,
+              engine: 'Radio Browser Live',
+              lyrics: [
+                { time: 0, text: `🔴 Live Broadcast: ${st.name}` },
+                { time: 8, text: `Country: ${st.country || 'International'}` },
+                { time: 15, text: `Bitrate: ${st.bitrate || 128} kbps • Lossless PreZify Live Engine` },
+                { time: 25, text: `Enjoy non-stop 24/7 music stream!` }
+              ]
+            };
+
+            if (!TRACKS_DATABASE.some(t => t.id === stationTrack.id)) {
+              TRACKS_DATABASE.push(stationTrack);
+            }
+            globalTracks.push(stationTrack);
+          });
+        }
+      }
+
+      if (globalTracks.length > 0) {
+        const allResults = [...matchedTracks];
+        globalTracks.forEach(gt => {
+          if (!allResults.some(r => r.id === gt.id)) {
+            allResults.push(gt);
+          }
+        });
+
+        this.renderSearchResults(allResults, topMatchContainer, tbody, false);
+        return;
+      }
     } catch (err) {
-      console.warn('Online cloud search error:', err);
+      console.warn('Dual cloud search engine note:', err);
     }
 
     if (matchedTracks.length === 0) {

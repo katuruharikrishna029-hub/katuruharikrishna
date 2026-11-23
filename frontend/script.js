@@ -782,6 +782,7 @@ class PreZifyApp {
 
       // Containers
       trendingContainer: document.getElementById('trending-songs-container'),
+      liveGlobalContainer: document.getElementById('live-global-music-container'),
       curatedPlaylistsContainer: document.getElementById('curated-playlists-container'),
       popularArtistsContainer: document.getElementById('popular-artists-container'),
       recommendedAlbumsContainer: document.getElementById('recommended-albums-container'),
@@ -827,9 +828,14 @@ class PreZifyApp {
       if (serverTracks) {
         const rateLabel = document.getElementById('engine-rate-label');
         if (rateLabel) rateLabel.textContent = 'REST API Backend Online';
+        serverTracks.forEach(track => {
+          if (!TRACKS_DATABASE.some(t => t.id === track.id)) TRACKS_DATABASE.push(track);
+        });
         this.showToast('PreZify REST API Server Connected', 'cyan');
+        this.renderTrendingSongs(this.state.activeGenre);
       }
     });
+    this.loadLiveGlobalMusic();
 
     console.log('PreZify Audio Streaming Platform initialized successfully.');
   }
@@ -850,6 +856,89 @@ class PreZifyApp {
 
     // Recommended Albums
     this.renderRecommendedAlbums();
+  }
+
+  createGlobalTrack(item) {
+    const hdCover = item.artworkUrl100
+      ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg')
+      : 'images/cover1.jpg';
+
+    return {
+      id: `cloud-${item.trackId}`,
+      title: item.trackName || 'Unknown Title',
+      artist: item.artistName || 'Unknown Artist',
+      album: item.collectionName || 'Single',
+      genre: item.primaryGenreName || 'Music',
+      audioSrc: item.previewUrl,
+      cover: hdCover,
+      plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
+      duration: Math.round((item.trackTimeMillis || 30000) / 1000),
+      year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
+      isCloud: true,
+      lyrics: [
+        { time: 0, text: `♪ Now Streaming: ${item.trackName || 'Unknown Title'} ♪` },
+        { time: 5, text: `Artist: ${item.artistName || 'Unknown Artist'}` },
+        { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
+        { time: 15, text: 'PreZify Global Hi-Fi Stream' },
+        { time: 25, text: '♪ Feel every beat... live every moment ♪' }
+      ]
+    };
+  }
+
+  async loadLiveGlobalMusic() {
+    if (!this.dom.liveGlobalContainer) return;
+    this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted" id="global-music-loading">Loading live global music...</div>';
+
+    const terms = ['top hits 2026', 'new pop', 'dance music', 'lofi', 'indian music', 'synthwave'];
+    const term = terms[Math.floor(Math.random() * terms.length)];
+    try {
+      const proxyUrl = this.apiClient.isOnline
+        ? `${this.apiClient.apiBase}/api/global/search?q=${encodeURIComponent(term)}&limit=24`
+        : `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=24`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error(`Global music request failed (${response.status})`);
+
+      const json = await response.json();
+      const results = json.results || json.data || [];
+      const tracks = results
+        .filter(item => item.previewUrl)
+        .map(item => this.createGlobalTrack(item));
+
+      tracks.forEach(track => {
+        if (!TRACKS_DATABASE.some(t => t.id === track.id)) TRACKS_DATABASE.push(track);
+      });
+
+      if (tracks.length === 0) {
+        this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted">No live preview tracks are available right now.</div>';
+        return;
+      }
+
+      this.dom.liveGlobalContainer.innerHTML = '';
+      tracks.slice(0, 12).forEach(track => {
+        const card = document.createElement('div');
+        card.className = 'music-card';
+        card.innerHTML = `
+          <div class="card-img-wrap">
+            <img src="${track.cover}" alt="${track.title}" class="card-cover-img" onerror="this.src='images/cover1.jpg'">
+            <button class="card-play-fab" title="Play ${track.title}">
+              <i class="bi bi-play-fill"></i>
+            </button>
+          </div>
+          <h4 class="card-title">${track.title}</h4>
+          <p class="card-desc">${track.artist}</p>
+        `;
+        card.addEventListener('click', () => this.playTrackById(track.id));
+        const fab = card.querySelector('.card-play-fab');
+        fab.addEventListener('click', e => {
+          e.stopPropagation();
+          this.playTrackById(track.id);
+        });
+        this.dom.liveGlobalContainer.appendChild(card);
+      });
+    } catch (err) {
+      console.warn('Live global music unavailable:', err);
+      this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted">Live global music could not be loaded. Try refresh.</div>';
+    }
   }
 
   renderTrendingSongs(genreFilter = 'All') {
@@ -1748,14 +1837,24 @@ class PreZifyApp {
     // Initial render with local matches
     this.renderSearchResults(matchedTracks, topMatchContainer, tbody, true);
 
-    // 2. Fetch live global tracks from Apple / iTunes Cloud Streaming API
+    // 2. Dual Global Cloud Streaming Engines:
+    // Engine A: Apple Music Global Cloud API (Pop / Bollywood / Global Hits)
+    // Engine B: Radio Browser Live Stations & Streaming Engine (Live 24/7 Lo-Fi, Phonk, EDM, Rock, Jazz Stations)
     try {
-      const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(rawQuery)}&entity=song&limit=25`);
-      if (response.ok) {
-        const json = await response.json();
+      const [itunesRes, radioRes] = await Promise.allSettled([
+        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(rawQuery)}&entity=song&limit=25`),
+        fetch(`https://de1.api.radio-browser.info/json/stations/search?name=${encodeURIComponent(rawQuery)}&limit=10`, {
+          headers: { 'User-Agent': 'PreZifyMusic/2.0' }
+        })
+      ]);
+
+      const globalTracks = [];
+
+      // Process Engine A (Apple Music Tracks)
+      if (itunesRes.status === 'fulfilled' && itunesRes.value.ok) {
+        const json = await itunesRes.value.json();
         if (json.results && json.results.length > 0) {
-          const globalTracks = json.results.map(item => {
-            // High-res cover image
+          json.results.forEach(item => {
             const hdCover = item.artworkUrl100 
               ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg') 
               : 'images/cover1.jpg';
@@ -1772,36 +1871,75 @@ class PreZifyApp {
               duration: Math.round((item.trackTimeMillis || 30000) / 1000),
               year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
               isCloud: true,
+              engine: 'Apple Music Cloud',
               lyrics: [
                 { time: 0, text: `♪ Now Streaming: ${item.trackName} ♪` },
                 { time: 5, text: `Artist: ${item.artistName}` },
                 { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
-                { time: 15, text: `PreZify Global Hi-Fi Stream` },
+                { time: 15, text: `PreZify Global Hi-Fi Stream (Engine A)` },
                 { time: 25, text: `♪ Feel every beat... live every moment ♪` }
               ]
             };
 
-            // Register into TRACKS_DATABASE if not already there
             if (!TRACKS_DATABASE.some(t => t.id === trackObj.id)) {
               TRACKS_DATABASE.push(trackObj);
             }
-            return trackObj;
+            globalTracks.push(trackObj);
           });
-
-          // Merge local and global tracks (avoid duplicates)
-          const allResults = [...matchedTracks];
-          globalTracks.forEach(gt => {
-            if (!allResults.some(r => r.id === gt.id)) {
-              allResults.push(gt);
-            }
-          });
-
-          this.renderSearchResults(allResults, topMatchContainer, tbody, false);
-          return;
         }
       }
+
+      // Process Engine B (Radio Browser 24/7 Live Stations)
+      if (radioRes.status === 'fulfilled' && radioRes.value.ok) {
+        const radioJson = await radioRes.value.json();
+        if (Array.isArray(radioJson) && radioJson.length > 0) {
+          radioJson.forEach(st => {
+            const streamUrl = st.url_resolved || st.url;
+            if (!streamUrl) return;
+
+            const stationTrack = {
+              id: `live-${st.stationuuid}`,
+              title: st.name.trim() || `${rawQuery} Live Stream`,
+              artist: `24/7 Live Radio (${st.country || 'Global'})`,
+              album: st.tags ? st.tags.split(',').slice(0, 3).join(', ') : 'Live Broadcast',
+              genre: st.tags ? st.tags.split(',')[0].toUpperCase() : 'LIVE',
+              audioSrc: streamUrl,
+              cover: st.favicon && st.favicon.startsWith('http') ? st.favicon : 'images/cover2.jpg',
+              plays: '🔴 LIVE NOW',
+              duration: 3600, // 1 hour live stream
+              year: 2026,
+              isCloud: true,
+              isLive: true,
+              engine: 'Radio Browser Live',
+              lyrics: [
+                { time: 0, text: `🔴 Live Broadcast: ${st.name}` },
+                { time: 8, text: `Country: ${st.country || 'International'}` },
+                { time: 15, text: `Bitrate: ${st.bitrate || 128} kbps • Lossless PreZify Live Engine` },
+                { time: 25, text: `Enjoy non-stop 24/7 music stream!` }
+              ]
+            };
+
+            if (!TRACKS_DATABASE.some(t => t.id === stationTrack.id)) {
+              TRACKS_DATABASE.push(stationTrack);
+            }
+            globalTracks.push(stationTrack);
+          });
+        }
+      }
+
+      if (globalTracks.length > 0) {
+        const allResults = [...matchedTracks];
+        globalTracks.forEach(gt => {
+          if (!allResults.some(r => r.id === gt.id)) {
+            allResults.push(gt);
+          }
+        });
+
+        this.renderSearchResults(allResults, topMatchContainer, tbody, false);
+        return;
+      }
     } catch (err) {
-      console.warn('Online cloud search error:', err);
+      console.warn('Dual cloud search engine note:', err);
     }
 
     if (matchedTracks.length === 0) {
