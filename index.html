@@ -141,6 +141,14 @@
       </div>
     </header>
 
+    <div class="mobile-search-row">
+      <i class="bi bi-search mobile-search-icon" aria-hidden="true"></i>
+      <input type="search" id="mobile-search-input" placeholder="Search songs, artists, albums..." autocomplete="off" aria-label="Search music">
+      <button class="mobile-search-clear-btn" id="mobile-search-clear-btn" type="button" aria-label="Clear search">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
     <!-- MAIN WRAPPER (SIDEBAR + MAIN CONTENT) -->
     <div class="app-body">
 
@@ -888,6 +896,10 @@
       <button class="mobile-nav-btn" data-nav="search">
         <i class="bi bi-search"></i>
         <span>Search</span>
+      </button>
+      <button class="mobile-nav-btn" data-nav="history">
+        <i class="bi bi-clock-history"></i>
+        <span>History</span>
       </button>
       <button class="mobile-nav-btn" data-nav="library">
         <i class="bi bi-collection-play-fill"></i>

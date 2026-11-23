@@ -711,6 +711,8 @@ class PreZifyApp {
       // Nav
       globalSearchInput: document.getElementById('global-search-input'),
       searchClearBtn: document.getElementById('search-clear-btn'),
+      mobileSearchInput: document.getElementById('mobile-search-input'),
+      mobileSearchClearBtn: document.getElementById('mobile-search-clear-btn'),
       brandHomeBtn: document.getElementById('brand-home-btn'),
       mobileMenuToggle: document.getElementById('mobile-menu-toggle'),
       sidebarCloseBtn: document.getElementById('sidebar-close-btn'),
@@ -1422,7 +1424,15 @@ class PreZifyApp {
   }
 
   onAudioTrackEnd() {
-    this.playNextTrack();
+    if (this.state.repeatMode === 'one') {
+      this.audioEngine.seek(0);
+      this.audioEngine.play();
+    } else if (this.state.repeatMode === 'all') {
+      this.playNextTrack();
+    } else {
+      this.state.isPlaying = false;
+      this.onAudioStateChange('pause');
+    }
   }
 
   onAudioStateChange(status) {
@@ -2009,7 +2019,12 @@ class PreZifyApp {
 
     // Mobile nav buttons
     document.querySelectorAll('.mobile-nav-btn[data-nav]').forEach(btn => {
-      btn.addEventListener('click', () => this.switchView(btn.dataset.nav));
+      btn.addEventListener('click', () => {
+        this.switchView(btn.dataset.nav);
+        if (btn.dataset.nav === 'search' && window.matchMedia('(max-width: 768px)').matches) {
+          this.dom.mobileSearchInput.focus();
+        }
+      });
     });
 
     // Mobile sidebar toggle
@@ -2270,25 +2285,37 @@ class PreZifyApp {
 
   bindSearchEvents() {
     let debounceTimer = null;
-    this.dom.globalSearchInput.addEventListener('input', (e) => {
-      const val = e.target.value;
-      this.dom.searchClearBtn.style.display = val ? 'inline-flex' : 'none';
+    const searchInputs = [this.dom.globalSearchInput, this.dom.mobileSearchInput];
+    const clearButtons = [this.dom.searchClearBtn, this.dom.mobileSearchClearBtn];
 
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        if (val) this.switchView('search');
-        this.performSearch(val);
-      }, 150);
+    searchInputs.forEach(input => {
+      input.addEventListener('input', () => {
+        const val = input.value;
+        searchInputs.forEach(searchInput => {
+          if (searchInput !== input) searchInput.value = val;
+        });
+        clearButtons.forEach(button => {
+          button.style.display = val ? 'inline-flex' : 'none';
+        });
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          if (val) this.switchView('search');
+          this.performSearch(val);
+        }, 150);
+      });
+
+      input.addEventListener('focus', () => {
+        if (input.value) this.switchView('search');
+      });
     });
 
-    this.dom.searchClearBtn.addEventListener('click', () => {
-      this.dom.globalSearchInput.value = '';
-      this.dom.searchClearBtn.style.display = 'none';
-      this.performSearch('');
-    });
-
-    this.dom.globalSearchInput.addEventListener('focus', () => {
-      if (this.dom.globalSearchInput.value) this.switchView('search');
+    clearButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        searchInputs.forEach(input => { input.value = ''; });
+        clearButtons.forEach(clearButton => { clearButton.style.display = 'none'; });
+        this.performSearch('');
+      });
     });
   }
 
