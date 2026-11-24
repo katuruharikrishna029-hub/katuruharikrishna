@@ -1248,15 +1248,39 @@ img {
   transform: scale(1.05);
 }
 
-.global-track-full-link {
-  display: inline-flex;
-  margin-top: 6px;
-  color: var(--accent-secondary);
-  font-size: 12px;
+.spotify-discovery-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 
-.global-track-full-link:hover {
-  text-decoration: underline;
+.spotify-discovery-card > i {
+  color: #1DB954;
+  font-size: 36px;
+}
+
+.spotify-discovery-card h3 {
+  margin-bottom: 6px;
+}
+
+.spotify-discovery-card p {
+  color: var(--text-secondary);
+}
+
+.spotify-search-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
 }
 
 .card-play-fab {
@@ -3182,6 +3206,11 @@ img {
 }
 
 @media (max-width: 768px) {
+  .spotify-search-cta {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .mobile-search-row {
     display: flex;
     align-items: center;

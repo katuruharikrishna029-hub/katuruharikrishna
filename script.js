@@ -791,7 +791,6 @@ class PreZifyApp {
 
       // Containers
       trendingContainer: document.getElementById('trending-songs-container'),
-      liveGlobalContainer: document.getElementById('live-global-music-container'),
       curatedPlaylistsContainer: document.getElementById('curated-playlists-container'),
       popularArtistsContainer: document.getElementById('popular-artists-container'),
       recommendedAlbumsContainer: document.getElementById('recommended-albums-container'),
@@ -844,8 +843,6 @@ class PreZifyApp {
         this.renderTrendingSongs(this.state.activeGenre);
       }
     });
-    this.loadLiveGlobalMusic();
-
     console.log('PreZify Audio Streaming Platform initialized successfully.');
   }
 
@@ -865,105 +862,6 @@ class PreZifyApp {
 
     // Recommended Albums
     this.renderRecommendedAlbums();
-  }
-
-  createGlobalTrack(item) {
-    const isLive = Boolean(item.isLive);
-    const hdCover = item.artworkUrl100
-      ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg')
-      : 'images/cover1.jpg';
-
-    return {
-      id: `cloud-${item.trackId}`,
-      title: item.trackName || 'Unknown Title',
-      artist: item.artistName || 'Unknown Artist',
-      album: item.collectionName || 'Single',
-      genre: item.primaryGenreName || 'Music',
-      audioSrc: item.previewUrl,
-      cover: hdCover,
-      plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
-      duration: isLive ? 3600 : 30,
-      year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
-      isCloud: true,
-      isLive,
-      isPreview: !isLive,
-      fullTrackUrl: item.trackViewUrl || null,
-      lyrics: [
-        { time: 0, text: `♪ Now Streaming: ${item.trackName || 'Unknown Title'} ♪` },
-        { time: 5, text: `Artist: ${item.artistName || 'Unknown Artist'}` },
-        { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
-        { time: 15, text: 'PreZify Global Hi-Fi Stream' },
-        { time: 25, text: '♪ Feel every beat... live every moment ♪' }
-      ]
-    };
-  }
-
-  async loadLiveGlobalMusic() {
-    if (!this.dom.liveGlobalContainer) return;
-    this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted" id="global-music-loading">Loading live global music...</div>';
-
-    const terms = ['top hits 2026', 'new pop', 'dance music', 'lofi', 'indian music', 'synthwave'];
-    const term = terms[Math.floor(Math.random() * terms.length)];
-    try {
-      const proxyUrl = this.apiClient.isOnline
-        ? `${this.apiClient.apiBase}/api/global/search?q=${encodeURIComponent(term)}&limit=24`
-        : `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=24`;
-      const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error(`Global music request failed (${response.status})`);
-
-      const json = await response.json();
-      const results = json.results || json.data || [];
-      const tracks = results
-        .filter(item => item.previewUrl)
-        .map(item => this.createGlobalTrack(item));
-
-      tracks.forEach(track => {
-        if (!TRACKS_DATABASE.some(t => t.id === track.id)) TRACKS_DATABASE.push(track);
-      });
-
-      if (tracks.length === 0) {
-        this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted">No live preview tracks are available right now.</div>';
-        return;
-      }
-
-      this.dom.liveGlobalContainer.innerHTML = '';
-      tracks.slice(0, 12).forEach(track => {
-        const card = document.createElement('div');
-        card.className = 'music-card';
-        card.innerHTML = `
-          <div class="card-img-wrap">
-            <img src="${track.cover}" alt="${track.title}" class="card-cover-img" onerror="this.src='images/cover1.jpg'">
-            <button class="card-play-fab" title="Play ${track.title}">
-              <i class="bi bi-play-fill"></i>
-            </button>
-          </div>
-          <h4 class="card-title">${track.title}</h4>
-          <p class="card-desc">${track.isPreview ? `30-second preview · ${track.artist}` : track.artist}</p>
-        `;
-        if (track.fullTrackUrl) {
-          const fullTrackLink = document.createElement('a');
-          fullTrackLink.className = 'global-track-full-link';
-          fullTrackLink.href = track.fullTrackUrl;
-          fullTrackLink.target = '_blank';
-          fullTrackLink.rel = 'noopener noreferrer';
-          fullTrackLink.textContent = 'Open full track on Apple Music';
-          card.appendChild(fullTrackLink);
-        }
-        card.addEventListener('click', e => {
-          if (e.target.closest('a, button')) return;
-          this.playTrackById(track.id);
-        });
-        const fab = card.querySelector('.card-play-fab');
-        fab.addEventListener('click', e => {
-          e.stopPropagation();
-          this.playTrackById(track.id);
-        });
-        this.dom.liveGlobalContainer.appendChild(card);
-      });
-    } catch (err) {
-      console.warn('Live global music unavailable:', err);
-      this.dom.liveGlobalContainer.innerHTML = '<div class="music-card text-muted">Live global music could not be loaded. Try refresh.</div>';
-    }
   }
 
   renderTrendingSongs(genreFilter = 'All') {
@@ -1269,18 +1167,6 @@ class PreZifyApp {
       this.openAddToPlaylistModal(track);
     });
 
-    if (track.fullTrackUrl) {
-      const fullTrackLink = document.createElement('a');
-      fullTrackLink.className = 'table-action-btn';
-      fullTrackLink.href = track.fullTrackUrl;
-      fullTrackLink.target = '_blank';
-      fullTrackLink.rel = 'noopener noreferrer';
-      fullTrackLink.title = 'Open full track on Apple Music';
-      fullTrackLink.setAttribute('aria-label', 'Open full track on Apple Music');
-      fullTrackLink.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
-      tr.querySelector('.track-actions-cell').appendChild(fullTrackLink);
-    }
-
     return tr;
   }
 
@@ -1462,11 +1348,7 @@ class PreZifyApp {
   }
 
   onAudioTrackEnd() {
-    if (this.state.currentTrack && this.state.currentTrack.isPreview) {
-      this.state.isPlaying = false;
-      this.onAudioStateChange('pause');
-      this.showToast('Preview ended. Use the full-track link in search results.', 'purple');
-    } else if (this.state.repeatMode === 'one') {
+    if (this.state.repeatMode === 'one') {
       this.audioEngine.seek(0);
       this.audioEngine.play();
     } else if (this.state.repeatMode === 'all') {
@@ -1853,10 +1735,10 @@ class PreZifyApp {
   }
 
   /* ==========================================================================
-     SEARCH ENGINE (LOCAL + GLOBAL ONLINE STREAMING API)
+     SEARCH ENGINE (LOCAL CATALOG + SPOTIFY SEARCH LINK)
      ========================================================================== */
 
-  async performSearch(query) {
+  performSearch(query) {
     const rawQuery = query.trim();
     this.state.searchQuery = rawQuery.toLowerCase();
     const heading = document.getElementById('search-results-heading');
@@ -1871,137 +1753,28 @@ class PreZifyApp {
       sub.textContent = 'Discover songs, artists, albums, or vibes';
       emptyState.classList.remove('hidden');
       activeContent.style.display = 'none';
+      document.getElementById('spotify-search-cta').style.display = 'none';
       return;
     }
 
     heading.textContent = `Results for "${rawQuery}"`;
     emptyState.classList.add('hidden');
     activeContent.style.display = 'block';
+    const spotifySearchLink = document.getElementById('spotify-search-link');
+    spotifySearchLink.href = `https://open.spotify.com/search/${encodeURIComponent(rawQuery)}`;
+    document.getElementById('spotify-search-cta').style.display = 'flex';
 
-    // 1. Match local tracks first
-    let matchedTracks = TRACKS_DATABASE.filter(t =>
+    const matchedTracks = TRACKS_DATABASE.filter(t =>
       t.title.toLowerCase().includes(this.state.searchQuery) ||
       t.artist.toLowerCase().includes(this.state.searchQuery) ||
       t.album.toLowerCase().includes(this.state.searchQuery) ||
       t.genre.toLowerCase().includes(this.state.searchQuery)
     );
 
-    // Initial render with local matches
-    this.renderSearchResults(matchedTracks, topMatchContainer, tbody, true);
-
-    // 2. Dual Global Cloud Streaming Engines:
-    // Engine A: Apple Music Global Cloud API (Pop / Bollywood / Global Hits)
-    // Engine B: Radio Browser Live Stations & Streaming Engine (Live 24/7 Lo-Fi, Phonk, EDM, Rock, Jazz Stations)
-    try {
-      const [itunesRes, radioRes] = await Promise.allSettled([
-        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(rawQuery)}&entity=song&limit=25`),
-        fetch(`https://de1.api.radio-browser.info/json/stations/search?name=${encodeURIComponent(rawQuery)}&limit=10`, {
-          headers: { 'User-Agent': 'PreZifyMusic/2.0' }
-        })
-      ]);
-
-      const globalTracks = [];
-
-      // Process Engine A (Apple Music Tracks)
-      if (itunesRes.status === 'fulfilled' && itunesRes.value.ok) {
-        const json = await itunesRes.value.json();
-        if (json.results && json.results.length > 0) {
-          json.results.forEach(item => {
-            const hdCover = item.artworkUrl100 
-              ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg') 
-              : 'images/cover1.jpg';
-
-            const trackObj = {
-              id: `cloud-${item.trackId}`,
-              title: item.trackName || 'Unknown Title',
-              artist: item.artistName || 'Unknown Artist',
-              album: item.collectionName || 'Single',
-              genre: item.primaryGenreName || 'Music',
-              audioSrc: item.previewUrl,
-              cover: hdCover,
-              plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
-              duration: 30,
-              year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
-              isCloud: true,
-              isPreview: true,
-              fullTrackUrl: item.trackViewUrl || null,
-              engine: 'Apple Music Cloud',
-              lyrics: [
-                { time: 0, text: `♪ Now Streaming: ${item.trackName} ♪` },
-                { time: 5, text: `Artist: ${item.artistName}` },
-                { time: 10, text: `Album: ${item.collectionName || 'Single'}` },
-                { time: 15, text: `PreZify Global Hi-Fi Stream (Engine A)` },
-                { time: 25, text: `♪ Feel every beat... live every moment ♪` }
-              ]
-            };
-
-            if (!TRACKS_DATABASE.some(t => t.id === trackObj.id)) {
-              TRACKS_DATABASE.push(trackObj);
-            }
-            if (item.previewUrl) globalTracks.push(trackObj);
-          });
-        }
-      }
-
-      // Process Engine B (Radio Browser 24/7 Live Stations)
-      if (radioRes.status === 'fulfilled' && radioRes.value.ok) {
-        const radioJson = await radioRes.value.json();
-        if (Array.isArray(radioJson) && radioJson.length > 0) {
-          radioJson.forEach(st => {
-            const streamUrl = st.url_resolved || st.url;
-            if (!streamUrl) return;
-
-            const stationTrack = {
-              id: `live-${st.stationuuid}`,
-              title: st.name.trim() || `${rawQuery} Live Stream`,
-              artist: `24/7 Live Radio (${st.country || 'Global'})`,
-              album: st.tags ? st.tags.split(',').slice(0, 3).join(', ') : 'Live Broadcast',
-              genre: st.tags ? st.tags.split(',')[0].toUpperCase() : 'LIVE',
-              audioSrc: streamUrl,
-              cover: st.favicon && st.favicon.startsWith('http') ? st.favicon : 'images/cover2.jpg',
-              plays: '🔴 LIVE NOW',
-              duration: 3600, // 1 hour live stream
-              year: 2026,
-              isCloud: true,
-              isLive: true,
-              engine: 'Radio Browser Live',
-              lyrics: [
-                { time: 0, text: `🔴 Live Broadcast: ${st.name}` },
-                { time: 8, text: `Country: ${st.country || 'International'}` },
-                { time: 15, text: `Bitrate: ${st.bitrate || 128} kbps • Lossless PreZify Live Engine` },
-                { time: 25, text: `Enjoy non-stop 24/7 music stream!` }
-              ]
-            };
-
-            if (!TRACKS_DATABASE.some(t => t.id === stationTrack.id)) {
-              TRACKS_DATABASE.push(stationTrack);
-            }
-            globalTracks.push(stationTrack);
-          });
-        }
-      }
-
-      if (globalTracks.length > 0) {
-        const allResults = [...matchedTracks];
-        globalTracks.forEach(gt => {
-          if (!allResults.some(r => r.id === gt.id)) {
-            allResults.push(gt);
-          }
-        });
-
-        this.renderSearchResults(allResults, topMatchContainer, tbody, false);
-        return;
-      }
-    } catch (err) {
-      console.warn('Dual cloud search engine note:', err);
-    }
-
-    if (matchedTracks.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No online tracks found for "${rawQuery}". Check your internet connection or try another keyword.</td></tr>`;
-    }
+    this.renderSearchResults(matchedTracks, topMatchContainer, tbody);
   }
 
-  renderSearchResults(tracks, topMatchContainer, tbody, isLoadingMore) {
+  renderSearchResults(tracks, topMatchContainer, tbody) {
     // Render Top Match
     topMatchContainer.innerHTML = '';
     if (tracks.length > 0) {
@@ -2009,12 +1782,12 @@ class PreZifyApp {
       const topCard = document.createElement('div');
       topCard.className = 'top-match-card';
       topCard.innerHTML = `
-        <span class="top-match-tag">${top.isPreview ? '30-SECOND PREVIEW' : (top.isCloud ? 'GLOBAL STREAM' : 'TOP RESULT')}</span>
+        <span class="top-match-tag">TOP RESULT</span>
         <div class="top-match-content">
           <img src="${top.cover}" alt="${top.title}" class="top-match-img" onerror="this.src='images/cover1.jpg'">
           <div class="top-match-info">
             <h3>${top.title}</h3>
-            <p>${top.artist} • ${top.isPreview ? 'Preview only' : (top.isCloud ? 'Global Cloud' : 'Song')}</p>
+            <p>${top.artist} • Song</p>
           </div>
           <button class="card-play-fab" style="opacity:1; transform:none; position:static; margin-left:auto;">
             <i class="bi bi-play-fill"></i>
@@ -2028,11 +1801,7 @@ class PreZifyApp {
     // Render Table Rows
     tbody.innerHTML = '';
     if (tracks.length === 0) {
-      if (isLoadingMore) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-accent" style="text-align:center; padding:30px;"><div class="spinner-border spinner-border-sm me-2"></div> Searching global music catalog online...</td></tr>`;
-      } else {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No tracks found.</td></tr>`;
-      }
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No local tracks found. Search Spotify for more music.</td></tr>';
     } else {
       tracks.forEach((t, i) => {
         tbody.appendChild(this.createTrackTableRow(t, i + 1));
@@ -2105,11 +1874,6 @@ class PreZifyApp {
       this.state.queue = [...TRACKS_DATABASE];
       this.playTrackById(TRACKS_DATABASE[0].id);
       this.showToast('Playing all Trending Songs', 'cyan');
-    });
-
-    // Refresh Live Global Music
-    document.getElementById('refresh-global-music-btn').addEventListener('click', () => {
-      this.loadLiveGlobalMusic();
     });
 
     // Liked Songs Hero Actions
@@ -2688,7 +2452,9 @@ class PreZifyApp {
     }
     const spotifyBtn = document.getElementById('btn-auth-spotify');
     if (spotifyBtn) {
-      spotifyBtn.addEventListener('click', () => this.handleSocialAuth('Spotify'));
+      spotifyBtn.addEventListener('click', () => {
+        window.open('https://open.spotify.com', '_blank', 'noopener,noreferrer');
+      });
     }
     const appleBtn = document.getElementById('btn-auth-apple');
     if (appleBtn) {

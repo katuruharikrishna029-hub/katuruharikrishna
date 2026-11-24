@@ -48,7 +48,7 @@
         </nav>
       </div>
 
-      <!-- CENTER: GLOBAL LIVE SEARCH -->
+      <!-- CENTER: SEARCH -->
       <div class="nav-center">
         <div class="search-bar-wrapper">
           <i class="bi bi-search search-icon"></i>
@@ -330,16 +330,20 @@
           <div class="content-section">
             <div class="section-header">
               <div>
-                <h2 class="section-title">Live Global Music</h2>
-                <p class="section-subtitle">Play previews here; open Apple Music for full tracks</p>
+                <h2 class="section-title">Spotify Catalog</h2>
+                <p class="section-subtitle">Search Spotify and listen to music available to your account</p>
               </div>
-              <button class="section-action-btn" id="refresh-global-music-btn">
-                <i class="bi bi-arrow-clockwise"></i> Refresh
-              </button>
+              <a class="section-action-btn" href="https://open.spotify.com/search/top%20hits" target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-spotify"></i> Open Spotify
+              </a>
             </div>
 
-            <div class="cards-grid" id="live-global-music-container">
-              <div class="music-card text-muted" id="global-music-loading">Loading live global music...</div>
+            <div class="spotify-discovery-card">
+              <i class="bi bi-spotify"></i>
+              <div>
+                <h3>Full songs on Spotify</h3>
+                <p>Spotify handles playback in a new tab. Sign in there to listen to tracks available to your account.</p>
+              </div>
             </div>
           </div>
 
@@ -468,6 +472,12 @@
                   </thead>
                   <tbody id="search-tracks-tbody"></tbody>
                 </table>
+              </div>
+              <div class="spotify-search-cta" id="spotify-search-cta" style="display: none;">
+                <span>Looking for the full song? Open these results in Spotify.</span>
+                <a class="btn btn-primary" id="spotify-search-link" href="https://open.spotify.com/search/" target="_blank" rel="noopener noreferrer">
+                  <i class="bi bi-spotify"></i> Search Spotify
+                </a>
               </div>
             </div>
           </div>
@@ -1150,7 +1160,7 @@
 
         <button class="btn btn-social btn-spotify" id="btn-auth-spotify">
           <i class="bi bi-spotify social-icon" style="color: #1DB954; font-size: 20px;"></i>
-          <span>Continue with Spotify</span>
+          <span>Open Spotify</span>
         </button>
 
         <button class="btn btn-social btn-apple" id="btn-auth-apple">

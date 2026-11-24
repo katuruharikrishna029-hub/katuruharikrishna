@@ -2,7 +2,7 @@
 
 > *"Feel Every Beat. Live Every Moment."*
 
-PreZify is a commercial-grade, full-stack music streaming platform featuring a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. Built with a dark cyber-luxury aesthetic, glassmorphic UI elements, dynamic audio visualizers, and responsive controls, PreZify delivers an Apple Music, Spotify, and YouTube Music grade listening experience directly in the browser.
+PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and Spotify search links for exploring Spotify's full catalog. Spotify playback opens on Spotify and requires the user to sign in there.
 
 ---
 

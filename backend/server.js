@@ -7,8 +7,6 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
-const httpClient = require('http');
-const https = require('https');
 // Simple .env loader (no external deps)
 const envPath = path.join(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
@@ -72,33 +70,6 @@ function parseRequestBody(req) {
       }
     });
     req.on('error', reject);
-  });
-}
-
-function fetchJson(targetUrl) {
-  return new Promise((resolve, reject) => {
-    const client = targetUrl.startsWith('https:') ? https : httpClient;
-    const request = client.get(targetUrl, {
-      headers: { 'User-Agent': 'PreZifyMusic/2.0', Accept: 'application/json' }
-    }, response => {
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        response.resume();
-        reject(new Error(`External music API returned ${response.statusCode}`));
-        return;
-      }
-      let body = '';
-      response.setEncoding('utf8');
-      response.on('data', chunk => { body += chunk; });
-      response.on('end', () => {
-        try {
-          resolve(JSON.parse(body));
-        } catch (err) {
-          reject(err);
-        }
-      });
-    });
-    request.setTimeout(10000, () => request.destroy(new Error('External music API timed out')));
-    request.on('error', reject);
   });
 }
 
@@ -363,52 +334,6 @@ const server = http.createServer(async (req, res) => {
         playlists: matchedPlaylists
       }
     }));
-    return;
-  }
-
-  // ==========================================
-  // API ROUTE 9: GET /api/global/search?q=query
-  // Live Apple Music catalog + 24/7 Radio Browser stations
-  // ==========================================
-  if (req.method === 'GET' && pathname === '/api/global/search') {
-    const q = (query.q || 'top hits').trim();
-    const limit = Math.max(1, Math.min(parseInt(query.limit, 10) || 24, 50));
-
-    try {
-      const [itunesJson, radioStations] = await Promise.allSettled([
-        fetchJson(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=${limit}`),
-        fetchJson(`https://de1.api.radio-browser.info/json/stations/search?name=${encodeURIComponent(q)}&limit=10`)
-      ]);
-
-      const results = [];
-      if (itunesJson.status === 'fulfilled' && Array.isArray(itunesJson.value.results)) {
-        results.push(...itunesJson.value.results);
-      }
-      if (radioStations.status === 'fulfilled' && Array.isArray(radioStations.value)) {
-        radioStations.value.forEach(station => {
-          const streamUrl = station.url_resolved || station.url;
-          if (!streamUrl) return;
-          results.push({
-            trackId: station.stationuuid,
-            trackName: station.name || `${q} Live Radio`,
-            artistName: `24/7 Live Radio (${station.country || 'Global'})`,
-            collectionName: station.tags ? station.tags.split(',').slice(0, 3).join(', ') : 'Live Broadcast',
-            primaryGenreName: 'LIVE RADIO',
-            artworkUrl100: station.favicon || '',
-            previewUrl: streamUrl,
-            trackTimeMillis: 0,
-            isLive: true,
-            releaseDate: new Date().toISOString()
-          });
-        });
-      }
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, query: q, count: results.length, results }));
-    } catch (err) {
-      res.writeHead(502, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: 'Global music providers are unavailable' }));
-    }
     return;
   }
 
