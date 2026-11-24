@@ -1313,15 +1313,19 @@ img {
   margin-top: 4px;
 }
 
-.itunes-result-card audio,
+.itunes-result-duration {
+  margin-top: 4px;
+}
+
+.itunes-preview-play,
 .itunes-no-preview,
 .itunes-preview-error,
 .itunes-store-badge {
   grid-column: 1 / -1;
 }
 
-.itunes-result-card audio {
-  width: 100%;
+.itunes-preview-play {
+  justify-self: start;
 }
 
 .itunes-store-badge {

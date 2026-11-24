@@ -435,11 +435,13 @@ class PreZifyState {
    ========================================================================== */
 
 class PreZifyAudioEngine {
-  constructor(state, onTimeUpdate, onTrackEnd, onStateChange) {
+  constructor(state, onTimeUpdate, onTrackEnd, onStateChange, onTrackError) {
     this.state = state;
     this.onTimeUpdate = onTimeUpdate;
     this.onTrackEnd = onTrackEnd;
     this.onStateChange = onStateChange;
+    this.onTrackError = onTrackError;
+    this.lastPreviewErrorTrackId = null;
 
     this.audio = document.getElementById('prezify-audio-engine');
     this.audio.volume = this.state.volume;
@@ -492,9 +494,25 @@ class PreZifyAudioEngine {
     });
 
     this.audio.addEventListener('error', (e) => {
+      if (this.handlePreviewPlaybackError(e)) return;
       console.warn('Native audio load error, engaging procedural synthesizer fallback', e);
       this.startSynthFallback();
     });
+  }
+
+  handlePreviewPlaybackError(error) {
+    const track = this.state.currentTrack;
+    if (!track || !track.isItunesPreview) return false;
+
+    this.audio.pause();
+    this.stopSynthFallback();
+    this.state.isPlaying = false;
+    if (this.onStateChange) this.onStateChange('pause');
+    if (this.lastPreviewErrorTrackId !== track.id) {
+      this.lastPreviewErrorTrackId = track.id;
+      if (this.onTrackError) this.onTrackError(track, error);
+    }
+    return true;
   }
 
   ensureWebAudio() {
@@ -527,6 +545,7 @@ class PreZifyAudioEngine {
   loadTrack(track, autoPlay = true) {
     if (!track) return;
     this.stopSynthFallback();
+    this.lastPreviewErrorTrackId = null;
     
     // For online cloud streams (CORS audio), remove crossOrigin or set to anonymous safely
     if (track.isCloud || (track.audioSrc && track.audioSrc.startsWith('http'))) {
@@ -536,6 +555,7 @@ class PreZifyAudioEngine {
     this.audio.src = track.audioSrc;
     this.audio.playbackRate = this.state.playbackRate;
     this.audio.load();
+    if (this.onTimeUpdate) this.onTimeUpdate(0, track.duration || 0);
 
     if (autoPlay) {
       this.play();
@@ -559,6 +579,7 @@ class PreZifyAudioEngine {
         this.state.isPlaying = true;
         if (this.onStateChange) this.onStateChange('play');
       }).catch(err => {
+        if (this.handlePreviewPlaybackError(err)) return;
         console.warn('Autoplay prevented or network blocked. User interaction needed:', err);
       });
     }
@@ -707,12 +728,16 @@ class PreZifyApp {
       this.state,
       (curr, dur) => this.onAudioTimeUpdate(curr, dur),
       () => this.onAudioTrackEnd(),
-      (status) => this.onAudioStateChange(status)
+      (status) => this.onAudioStateChange(status),
+      (track, error) => this.onAudioTrackError(track, error)
     );
 
     this.isScrubbing = false;
     this.isVolumeScrubbing = false;
     this.itunesSearchAbortController = null;
+    this.itunesTrackCache = new Map();
+    this.itunesPreviewMessages = new Map();
+    this.itunesSearchQueue = [];
 
     // Cache key DOM elements
     this.dom = {
@@ -1179,8 +1204,17 @@ class PreZifyApp {
      ========================================================================== */
 
   playTrackById(trackId) {
-    const track = TRACKS_DATABASE.find(t => t.id === trackId);
+    const track = TRACKS_DATABASE.find(t => t.id === trackId)
+      || this.state.queue.find(t => t.id === trackId)
+      || this.itunesTrackCache.get(trackId);
     if (!track) return;
+
+    const trackIsQueued = this.state.queue.some(t => t.id === track.id);
+    if (this.state.currentTrack && this.state.currentTrack.isItunesPreview && !track.isItunesPreview && !trackIsQueued) {
+      this.state.queue = [...TRACKS_DATABASE];
+      this.state.originalQueue = [...this.state.queue];
+      this.state.isShuffled = false;
+    }
 
     // If already playing this track, toggle play/pause
     if (this.state.currentTrack && this.state.currentTrack.id === track.id) {
@@ -1195,11 +1229,26 @@ class PreZifyApp {
       this.state.currentTrackIndex = 0;
     }
 
-    this.state.addToHistory(track.id);
+    if (!track.isItunesPreview) this.state.addToHistory(track.id);
     this.updatePlayerUI(track);
     this.audioEngine.loadTrack(track, true);
     this.updateActiveTrackInUI();
     this.renderQueueDrawer();
+  }
+
+  playItunesTrack(trackId) {
+    const track = this.itunesTrackCache.get(trackId);
+    if (!track || !track.audioSrc) {
+      this.showToast('Audio preview unavailable.', 'purple');
+      return;
+    }
+
+    this.state.queue = [...this.itunesSearchQueue];
+    this.state.originalQueue = [...this.itunesSearchQueue];
+    this.state.currentTrackIndex = this.state.queue.findIndex(t => t.id === track.id);
+    this.state.isShuffled = false;
+    if (this.dom.playerShuffleBtn) this.dom.playerShuffleBtn.classList.remove('active');
+    this.playTrackById(track.id);
   }
 
   togglePlayPause() {
@@ -1325,6 +1374,10 @@ class PreZifyApp {
     const isLiked = this.state.likedSongIds.has(track.id);
     this.dom.playerLikeBtn.classList.toggle('liked', isLiked);
     this.dom.playerLikeBtn.querySelector('i').className = isLiked ? 'bi bi-heart-fill' : 'bi bi-heart';
+    this.dom.playerLikeBtn.disabled = Boolean(track.isItunesPreview);
+    this.dom.playerLikeBtn.title = track.isItunesPreview
+      ? 'Catalog previews cannot be saved to your local library'
+      : 'Like track';
 
     // Update Fullscreen Lyrics View metadata
     const lyricsTitle = document.getElementById('lyrics-song-title');
@@ -1335,6 +1388,16 @@ class PreZifyApp {
     if (lyricsCover) lyricsCover.src = track.cover;
 
     this.renderLyricsView(track);
+  }
+
+  onAudioTrackError(track, error) {
+    console.error('[PreZify] iTunes audio preview could not be played:', error);
+    const message = this.itunesPreviewMessages.get(track.id);
+    if (message) {
+      message.hidden = false;
+      message.textContent = 'Audio preview unavailable in this browser.';
+    }
+    this.showToast('Audio preview unavailable.', 'purple');
   }
 
   onAudioTimeUpdate(currentTime, duration) {
@@ -1355,6 +1418,9 @@ class PreZifyApp {
     if (this.state.repeatMode === 'one') {
       this.audioEngine.seek(0);
       this.audioEngine.play();
+    } else if (this.state.currentTrack && this.state.currentTrack.isItunesPreview && this.state.repeatMode === 'off') {
+      this.state.isPlaying = false;
+      this.onAudioStateChange('pause');
     } else if (this.state.repeatMode === 'all') {
       this.playNextTrack();
     } else if (this.state.currentTrackIndex + 1 < this.state.queue.length) {
@@ -1823,9 +1889,30 @@ class PreZifyApp {
     }
   }
 
+  createItunesPreviewTrack(track) {
+    return {
+      id: `itunes-${track.trackId}`,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      genre: 'Catalog',
+      audioSrc: track.previewUrl,
+      cover: track.artworkUrl || 'images/cover1.jpg',
+      plays: '0',
+      duration: 30,
+      year: new Date().getFullYear(),
+      lyrics: [],
+      isCloud: true,
+      isItunesPreview: true
+    };
+  }
+
   renderItunesCatalog(tracks) {
     const resultsGrid = this.dom.itunesCatalogResults;
     resultsGrid.replaceChildren();
+    this.itunesTrackCache.clear();
+    this.itunesPreviewMessages.clear();
+    this.itunesSearchQueue = [];
     if (tracks.length === 0) {
       this.dom.itunesCatalogStatus.textContent = 'No iTunes songs were found for this search.';
       return;
@@ -1854,46 +1941,38 @@ class PreZifyApp {
       const album = document.createElement('p');
       album.className = 'itunes-result-album';
       album.textContent = track.album;
-      metadata.append(title, artist, album);
+      const duration = document.createElement('p');
+      duration.className = 'itunes-result-duration';
+      duration.textContent = Number.isFinite(track.trackTimeMillis) && track.trackTimeMillis > 0
+        ? `Full track · ${this.formatTime(track.trackTimeMillis / 1000)}`
+        : 'Full-track duration unavailable';
+      metadata.append(title, artist, album, duration);
 
       card.append(cover, metadata);
       if (track.previewUrl) {
-        const preview = document.createElement('audio');
-        preview.controls = true;
-        preview.preload = 'none';
-        preview.controlsList = 'nodownload';
-        preview.setAttribute('aria-label', `Short preview of ${track.title} by ${track.artist}`);
-        const showPreviewError = () => {
-          if (card.querySelector('.itunes-preview-error')) return;
-          const errorMessage = document.createElement('p');
-          errorMessage.className = 'itunes-preview-error';
-          errorMessage.textContent = 'This preview could not be played here. Use the Apple Music badge to open the store listing.';
-          card.appendChild(errorMessage);
-        };
-        const supportsPreview = preview.canPlayType('audio/mp4; codecs="mp4a.40.2"');
-        if (!supportsPreview) {
-          showPreviewError();
-        } else {
-          preview.addEventListener('error', showPreviewError);
-          preview.addEventListener('play', () => {
-            resultsGrid.querySelectorAll('audio').forEach(otherPreview => {
-              if (otherPreview !== preview) otherPreview.pause();
-            });
-            this.audioEngine.pause();
-            setTimeout(() => {
-              if (preview.error || preview.networkState === 3) showPreviewError();
-            }, 3000);
-          });
-          const source = document.createElement('source');
-          source.src = track.previewUrl;
-          source.type = 'audio/mp4';
-          preview.appendChild(source);
-          card.appendChild(preview);
-        }
+        const playerTrack = this.createItunesPreviewTrack(track);
+        this.itunesTrackCache.set(playerTrack.id, playerTrack);
+        this.itunesSearchQueue.push(playerTrack);
+
+        const playButton = document.createElement('button');
+        playButton.type = 'button';
+        playButton.className = 'btn btn-primary itunes-preview-play';
+        playButton.setAttribute('aria-label', `Play preview of ${track.title} by ${track.artist}`);
+        playButton.innerHTML = '<i class="bi bi-play-fill"></i> Play 30-second preview';
+        playButton.addEventListener('click', () => this.playItunesTrack(playerTrack.id));
+
+        const previewMessage = document.createElement('p');
+        previewMessage.className = 'itunes-preview-error';
+        previewMessage.hidden = true;
+        previewMessage.setAttribute('role', 'status');
+        previewMessage.setAttribute('aria-live', 'polite');
+        this.itunesPreviewMessages.set(playerTrack.id, previewMessage);
+
+        card.append(playButton, previewMessage);
       } else {
         const noPreview = document.createElement('p');
         noPreview.className = 'itunes-no-preview';
-        noPreview.textContent = 'No preview available.';
+        noPreview.textContent = 'Audio preview unavailable.';
         card.appendChild(noPreview);
       }
 

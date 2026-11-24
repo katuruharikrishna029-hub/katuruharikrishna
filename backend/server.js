@@ -391,7 +391,8 @@ const server = http.createServer(async (req, res) => {
             album: item.collectionName || 'Single',
             artworkUrl: normalizeAppleUrl(item.artworkUrl100),
             previewUrl: normalizeAppleUrl(item.previewUrl),
-            trackViewUrl: normalizeAppleUrl(item.trackViewUrl)
+            trackViewUrl: normalizeAppleUrl(item.trackViewUrl),
+            trackTimeMillis: Number.isFinite(item.trackTimeMillis) ? item.trackTimeMillis : null
           }))
           .filter(item => item.trackId && item.title && item.trackViewUrl);
 

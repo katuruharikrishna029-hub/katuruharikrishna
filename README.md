@@ -2,7 +2,7 @@
 
 > *"Feel Every Beat. Live Every Moment."*
 
-PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and full-track playback for audio files available to the app. Search also uses the keyless iTunes Search API for song metadata and available 30-second promotional previews; previews are separate from the local full-track player and link to the Apple store listing.
+PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and full-track playback for audio files available to the app. Search also uses the keyless iTunes Search API for song metadata and available 30-second promotional previews. Previews play through the existing PreZify player and stop at the end of the sample rather than automatically advancing; when no playable preview is available, PreZify displays a message rather than redirecting from Play. iTunes previews are not full-song playback; a licensed streaming provider is required for full commercial tracks.
 
 ---
 
