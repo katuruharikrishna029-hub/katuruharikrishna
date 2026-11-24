@@ -389,12 +389,12 @@ const server = http.createServer(async (req, res) => {
             title: item.trackName || '',
             artist: item.artistName || 'Unknown Artist',
             album: item.collectionName || 'Single',
-            artworkUrl: normalizeAppleUrl(item.artworkUrl100),
+            artworkUrl: normalizeAppleUrl(item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : ''),
             previewUrl: normalizeAppleUrl(item.previewUrl),
             trackViewUrl: normalizeAppleUrl(item.trackViewUrl),
             trackTimeMillis: Number.isFinite(item.trackTimeMillis) ? item.trackTimeMillis : null
           }))
-          .filter(item => item.trackId && item.title && item.trackViewUrl);
+          .filter(item => item.trackId && item.title);
 
         if (itunesSearchCache.size >= 100) {
           itunesSearchCache.delete(itunesSearchCache.keys().next().value);
@@ -414,6 +414,67 @@ const server = http.createServer(async (req, res) => {
       console.error('[iTunes Search API] Request failed:', error.message);
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: 'The iTunes catalog is temporarily unavailable. Please try again.' }));
+    }
+    return;
+  }
+
+  // ==========================================
+  // API ROUTE: GET /api/itunes/preview?url=...
+  // Stream authorized 30s audio previews with CORS and HTTP 206 Partial Content
+  // ==========================================
+  if (req.method === 'GET' && pathname === '/api/itunes/preview') {
+    const rawUrl = String(query.url || '').trim();
+    const validatedUrl = normalizeAppleUrl(rawUrl);
+    if (!validatedUrl) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Invalid or unauthorized preview URL.' }));
+      return;
+    }
+
+    try {
+      const headers = {
+        'User-Agent': 'PreZifyMusic/2.0 (Windows NT 10.0; Win64; x64)'
+      };
+      if (req.headers.range) {
+        headers['Range'] = req.headers.range;
+      }
+
+      const upstreamReq = https.get(validatedUrl, { headers }, (upstreamRes) => {
+        const statusCode = upstreamRes.statusCode || 200;
+        const resHeaders = {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+          'Access-Control-Allow-Headers': 'Range, Content-Type',
+          'Content-Type': upstreamRes.headers['content-type'] || 'audio/mp4',
+          'Accept-Ranges': 'bytes'
+        };
+
+        if (upstreamRes.headers['content-length']) {
+          resHeaders['Content-Length'] = upstreamRes.headers['content-length'];
+        }
+        if (upstreamRes.headers['content-range']) {
+          resHeaders['Content-Range'] = upstreamRes.headers['content-range'];
+        }
+
+        res.writeHead(statusCode, resHeaders);
+        upstreamRes.pipe(res);
+      });
+
+      upstreamReq.on('error', (err) => {
+        console.error('[Preview Proxy] Stream error:', err.message);
+        if (!res.headersSent) {
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Audio preview stream unavailable.' }));
+        }
+      });
+      upstreamReq.setTimeout(12000, () => {
+        upstreamReq.destroy(new Error('Preview request timed out'));
+      });
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Internal preview proxy error.' }));
+      }
     }
     return;
   }

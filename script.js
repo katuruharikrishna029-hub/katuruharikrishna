@@ -494,6 +494,14 @@ class PreZifyAudioEngine {
     });
 
     this.audio.addEventListener('error', (e) => {
+      const track = this.state.currentTrack;
+      if (track && track.isItunesPreview && track.fallbackSrc && this.audio.src !== track.fallbackSrc) {
+        console.warn('[PreZify] Retrying with direct Apple preview stream URL...');
+        this.audio.src = track.fallbackSrc;
+        this.audio.load();
+        this.audio.play().catch(err => this.handlePreviewPlaybackError(err));
+        return;
+      }
       if (this.handlePreviewPlaybackError(e)) return;
       console.warn('Native audio load error, engaging procedural synthesizer fallback', e);
       this.startSynthFallback();
@@ -547,8 +555,10 @@ class PreZifyAudioEngine {
     this.stopSynthFallback();
     this.lastPreviewErrorTrackId = null;
     
-    // For online cloud streams (CORS audio), remove crossOrigin or set to anonymous safely
+    // For online cloud streams / preview audio, enable CORS
     if (track.isCloud || (track.audioSrc && track.audioSrc.startsWith('http'))) {
+      this.audio.crossOrigin = 'anonymous';
+    } else {
       this.audio.removeAttribute('crossorigin');
     }
 
@@ -1243,6 +1253,13 @@ class PreZifyApp {
       return;
     }
 
+    // If currently playing this preview track, toggle play/pause
+    if (this.state.currentTrack && this.state.currentTrack.id === track.id) {
+      this.togglePlayPause();
+      this.updateActiveTrackInUI();
+      return;
+    }
+
     this.state.queue = [...this.itunesSearchQueue];
     this.state.originalQueue = [...this.itunesSearchQueue];
     this.state.currentTrackIndex = this.state.queue.findIndex(t => t.id === track.id);
@@ -1391,11 +1408,11 @@ class PreZifyApp {
   }
 
   onAudioTrackError(track, error) {
-    console.error('[PreZify] iTunes audio preview could not be played:', error);
+    console.error('[PreZify] Audio preview could not be played:', error);
     const message = this.itunesPreviewMessages.get(track.id);
     if (message) {
       message.hidden = false;
-      message.textContent = 'Audio preview unavailable in this browser.';
+      message.textContent = 'Audio preview unavailable.';
     }
     this.showToast('Audio preview unavailable.', 'purple');
   }
@@ -1418,16 +1435,13 @@ class PreZifyApp {
     if (this.state.repeatMode === 'one') {
       this.audioEngine.seek(0);
       this.audioEngine.play();
-    } else if (this.state.currentTrack && this.state.currentTrack.isItunesPreview && this.state.repeatMode === 'off') {
-      this.state.isPlaying = false;
-      this.onAudioStateChange('pause');
     } else if (this.state.repeatMode === 'all') {
       this.playNextTrack();
-    } else if (this.state.currentTrackIndex + 1 < this.state.queue.length) {
-      this.playNextTrack();
     } else {
+      // Repeat is 'off' by default: stop cleanly at song end, do NOT auto-advance
       this.state.isPlaying = false;
       this.onAudioStateChange('pause');
+      this.updateActiveTrackInUI();
     }
   }
 
@@ -1462,6 +1476,26 @@ class PreZifyApp {
       const icon = row.querySelector('.row-play-icon');
       if (icon) {
         icon.className = isCurrent && this.state.isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill';
+      }
+    });
+
+    // Update iTunes / global catalog cards
+    document.querySelectorAll('.itunes-result-card').forEach(card => {
+      const isCurrent = card.dataset.id === currentId;
+      card.classList.toggle('is-active', isCurrent);
+      const playBtn = card.querySelector('.itunes-preview-play');
+      if (playBtn) {
+        const icon = playBtn.querySelector('i');
+        const span = playBtn.querySelector('span');
+        if (isCurrent && this.state.isPlaying) {
+          if (icon) icon.className = 'bi bi-pause-fill';
+          if (span) span.textContent = 'Pause Preview';
+          playBtn.classList.add('playing');
+        } else {
+          if (icon) icon.className = 'bi bi-play-fill';
+          if (span) span.textContent = isCurrent ? 'Resume Preview' : 'Play Preview';
+          playBtn.classList.remove('playing');
+        }
       }
     });
   }
@@ -1890,16 +1924,20 @@ class PreZifyApp {
   }
 
   createItunesPreviewTrack(track) {
+    const rawPreview = track.previewUrl || '';
+    const streamUrl = rawPreview ? `${this.apiClient.apiBase}/api/itunes/preview?url=${encodeURIComponent(rawPreview)}` : '';
     return {
       id: `itunes-${track.trackId}`,
       title: track.title,
       artist: track.artist,
-      album: track.album,
-      genre: 'Catalog',
-      audioSrc: track.previewUrl,
+      album: track.album || 'Single',
+      genre: 'Catalog Preview',
+      audioSrc: streamUrl || rawPreview,
+      fallbackSrc: rawPreview,
       cover: track.artworkUrl || 'images/cover1.jpg',
       plays: '0',
       duration: 30,
+      fullDuration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : 30,
       year: new Date().getFullYear(),
       lyrics: [],
       isCloud: true,
@@ -1914,41 +1952,65 @@ class PreZifyApp {
     this.itunesPreviewMessages.clear();
     this.itunesSearchQueue = [];
     if (tracks.length === 0) {
-      this.dom.itunesCatalogStatus.textContent = 'No iTunes songs were found for this search.';
+      this.dom.itunesCatalogStatus.textContent = 'No catalog songs were found for this search.';
       return;
     }
 
-    this.dom.itunesCatalogStatus.textContent = `${tracks.length} iTunes catalog results`;
-    const badgeUrl = 'https://tools.applemediaservices.com/api/badges/listen-on-apple-music/badge/en-us?size=250x83';
+    this.dom.itunesCatalogStatus.textContent = `${tracks.length} songs found in catalog`;
     const fragment = document.createDocumentFragment();
 
     tracks.forEach(track => {
       const card = document.createElement('article');
       card.className = 'itunes-result-card';
+      const trackId = `itunes-${track.trackId}`;
+      card.dataset.id = trackId;
+
+      const coverWrap = document.createElement('div');
+      coverWrap.className = 'itunes-cover-wrap';
 
       const cover = document.createElement('img');
       cover.className = 'itunes-result-cover';
       cover.src = track.artworkUrl || 'images/cover1.jpg';
       cover.alt = `${track.title} album artwork`;
       cover.loading = 'lazy';
+      coverWrap.appendChild(cover);
 
       const metadata = document.createElement('div');
       metadata.className = 'itunes-result-metadata';
+
       const title = document.createElement('h3');
       title.textContent = track.title;
+      title.title = track.title;
+
       const artist = document.createElement('p');
+      artist.className = 'itunes-result-artist';
       artist.textContent = track.artist;
+      artist.title = track.artist;
+
       const album = document.createElement('p');
       album.className = 'itunes-result-album';
       album.textContent = track.album;
-      const duration = document.createElement('p');
-      duration.className = 'itunes-result-duration';
-      duration.textContent = Number.isFinite(track.trackTimeMillis) && track.trackTimeMillis > 0
-        ? `Full track · ${this.formatTime(track.trackTimeMillis / 1000)}`
-        : 'Full-track duration unavailable';
-      metadata.append(title, artist, album, duration);
+      album.title = track.album;
 
-      card.append(cover, metadata);
+      const metaRow = document.createElement('div');
+      metaRow.className = 'itunes-result-meta-row';
+
+      const duration = document.createElement('span');
+      duration.className = 'itunes-result-duration';
+      const durationSec = Number.isFinite(track.trackTimeMillis) && track.trackTimeMillis > 0
+        ? this.formatTime(track.trackTimeMillis / 1000)
+        : '';
+      duration.innerHTML = durationSec ? `<i class="bi bi-clock"></i> ${durationSec}` : '';
+
+      const badge = document.createElement('span');
+      badge.className = 'itunes-preview-badge';
+      badge.textContent = track.previewUrl ? '30s Preview' : 'Metadata Only';
+
+      metaRow.append(duration, badge);
+      metadata.append(title, artist, album, metaRow);
+
+      card.append(coverWrap, metadata);
+
       if (track.previewUrl) {
         const playerTrack = this.createItunesPreviewTrack(track);
         this.itunesTrackCache.set(playerTrack.id, playerTrack);
@@ -1958,36 +2020,34 @@ class PreZifyApp {
         playButton.type = 'button';
         playButton.className = 'btn btn-primary itunes-preview-play';
         playButton.setAttribute('aria-label', `Play preview of ${track.title} by ${track.artist}`);
-        playButton.innerHTML = '<i class="bi bi-play-fill"></i> Play 30-second preview';
-        playButton.addEventListener('click', () => this.playItunesTrack(playerTrack.id));
+
+        const isCurrentlyPlaying = this.state.currentTrack && this.state.currentTrack.id === playerTrack.id && this.state.isPlaying;
+        playButton.innerHTML = isCurrentlyPlaying
+          ? '<i class="bi bi-pause-fill"></i> <span>Pause Preview</span>'
+          : '<i class="bi bi-play-fill"></i> <span>Play Preview</span>';
+        if (isCurrentlyPlaying) playButton.classList.add('playing');
+
+        playButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.playItunesTrack(playerTrack.id);
+        });
 
         const previewMessage = document.createElement('p');
         previewMessage.className = 'itunes-preview-error';
         previewMessage.hidden = true;
         previewMessage.setAttribute('role', 'status');
         previewMessage.setAttribute('aria-live', 'polite');
+        previewMessage.textContent = 'Audio preview unavailable.';
         this.itunesPreviewMessages.set(playerTrack.id, previewMessage);
 
         card.append(playButton, previewMessage);
       } else {
         const noPreview = document.createElement('p');
         noPreview.className = 'itunes-no-preview';
-        noPreview.textContent = 'Audio preview unavailable.';
+        noPreview.innerHTML = '<i class="bi bi-info-circle"></i> Audio preview unavailable';
         card.appendChild(noPreview);
       }
 
-      const storeLink = document.createElement('a');
-      storeLink.className = 'itunes-store-badge';
-      storeLink.href = track.trackViewUrl;
-      storeLink.target = '_blank';
-      storeLink.rel = 'noopener noreferrer';
-      storeLink.setAttribute('aria-label', `Open ${track.title} in the Apple music store`);
-      const badge = document.createElement('img');
-      badge.src = badgeUrl;
-      badge.alt = 'Listen on Apple Music';
-      badge.loading = 'lazy';
-      storeLink.appendChild(badge);
-      card.appendChild(storeLink);
       fragment.appendChild(card);
     });
 

@@ -456,11 +456,14 @@
             <section class="content-section mt-30" id="itunes-catalog-section" style="display: none;">
               <div class="section-header">
                 <div>
-                  <h2 class="section-title">iTunes Catalog</h2>
-                  <p class="section-subtitle">Search Apple’s music catalog for more songs.</p>
+                  <h2 class="section-title">Global Music Search</h2>
+                  <p class="section-subtitle">Search songs and play authorized audio previews directly inside PreZify.</p>
                 </div>
               </div>
-              <p class="itunes-catalog-attribution">Song metadata and promotional 30-second previews are provided courtesy of iTunes. Play previews in the PreZify player; the separate Apple Music badge opens the store listing.</p>
+              <div class="catalog-licensing-banner">
+                <i class="bi bi-shield-check"></i>
+                <span>Authorized promotional 30-second previews play directly in PreZify. Full-song playback requires a licensed streaming provider integration (Apple MusicKit / Spotify Web SDK).</span>
+              </div>
               <p class="itunes-catalog-status" id="itunes-catalog-status" role="status" aria-live="polite"></p>
               <div class="itunes-results-grid" id="itunes-catalog-results"></div>
             </section>

@@ -162,5 +162,25 @@ The PreZify backend exposes the following endpoints (default port: `5000`):
 
 ---
 
+## 🎧 Global Music Search & Legal Streaming Integration
+
+PreZify features a unified music playback experience designed to keep users entirely inside the PreZify website without redirecting to third-party stores or services:
+
+1. **In-App Global Search & Metadata**:
+   - Searches millions of tracks via the iTunes Search API.
+   - Displays song title, artist, album, high-resolution album artwork (300×300), full duration, and preview badges directly inside PreZify.
+2. **Authorized In-App Audio Previews**:
+   - Authorized 30-second promotional audio preview streams are played directly inside the PreZify audio player.
+   - Fully integrated with the bottom player controls: Play/Pause, Seeker bar, Volume, Mute, and Queue drawer.
+   - If a preview is unavailable, a clear *"Audio preview unavailable"* indicator is shown; users are never redirected.
+3. **Full-Song Streaming Integration Requirements**:
+   - The iTunes Search API provides search metadata and authorized 30-second promotional samples for public search.
+   - Streaming **full-length commercial copyrighted songs** requires integration with a licensed streaming provider SDK:
+     - **Apple MusicKit JS**: Requires an Apple Developer Program enrollment, a MusicKit Developer Key (.p8 private key), and subscriber authentication via Apple ID login (`MusicKit.getInstance().authorize()`).
+     - **Spotify Web Playback SDK**: Requires a Spotify Developer Application (Client ID/Secret) and Spotify Premium user OAuth login (`streaming` scope).
+     - **PreZify Local Catalog**: Full tracks included with the application play in full length using HTTP 206 Partial Content streaming from the backend.
+
+---
+
 ## 📜 License
 Created for hackathon demonstration. Royalty-free musical assets and imagery used under Creative Commons / Unsplash licenses.
