@@ -397,6 +397,7 @@ const server = http.createServer(async (req, res) => {
             artworkUrl100: station.favicon || '',
             previewUrl: streamUrl,
             trackTimeMillis: 0,
+            isLive: true,
             releaseDate: new Date().toISOString()
           });
         });

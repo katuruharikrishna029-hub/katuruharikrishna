@@ -1248,6 +1248,17 @@ img {
   transform: scale(1.05);
 }
 
+.global-track-full-link {
+  display: inline-flex;
+  margin-top: 6px;
+  color: var(--accent-secondary);
+  font-size: 12px;
+}
+
+.global-track-full-link:hover {
+  text-decoration: underline;
+}
+
 .card-play-fab {
   position: absolute;
   bottom: 10px;

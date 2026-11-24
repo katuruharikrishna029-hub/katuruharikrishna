@@ -470,6 +470,13 @@ class PreZifyAudioEngine {
       this.updateBuffer();
     });
 
+    this.audio.addEventListener('loadedmetadata', () => {
+      if (this.state.currentTrack && Number.isFinite(this.audio.duration) && this.audio.duration > 0) {
+        this.state.currentTrack.duration = Math.round(this.audio.duration);
+        if (this.onTimeUpdate) this.onTimeUpdate(this.audio.currentTime, this.audio.duration);
+      }
+    });
+
     this.audio.addEventListener('ended', () => {
       if (this.onTrackEnd) this.onTrackEnd();
     });
@@ -861,6 +868,7 @@ class PreZifyApp {
   }
 
   createGlobalTrack(item) {
+    const isLive = Boolean(item.isLive);
     const hdCover = item.artworkUrl100
       ? item.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg')
       : 'images/cover1.jpg';
@@ -874,9 +882,12 @@ class PreZifyApp {
       audioSrc: item.previewUrl,
       cover: hdCover,
       plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
-      duration: Math.round((item.trackTimeMillis || 30000) / 1000),
+      duration: isLive ? 3600 : 30,
       year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
       isCloud: true,
+      isLive,
+      isPreview: !isLive,
+      fullTrackUrl: item.trackViewUrl || null,
       lyrics: [
         { time: 0, text: `♪ Now Streaming: ${item.trackName || 'Unknown Title'} ♪` },
         { time: 5, text: `Artist: ${item.artistName || 'Unknown Artist'}` },
@@ -927,9 +938,21 @@ class PreZifyApp {
             </button>
           </div>
           <h4 class="card-title">${track.title}</h4>
-          <p class="card-desc">${track.artist}</p>
+          <p class="card-desc">${track.isPreview ? `30-second preview · ${track.artist}` : track.artist}</p>
         `;
-        card.addEventListener('click', () => this.playTrackById(track.id));
+        if (track.fullTrackUrl) {
+          const fullTrackLink = document.createElement('a');
+          fullTrackLink.className = 'global-track-full-link';
+          fullTrackLink.href = track.fullTrackUrl;
+          fullTrackLink.target = '_blank';
+          fullTrackLink.rel = 'noopener noreferrer';
+          fullTrackLink.textContent = 'Open full track on Apple Music';
+          card.appendChild(fullTrackLink);
+        }
+        card.addEventListener('click', e => {
+          if (e.target.closest('a, button')) return;
+          this.playTrackById(track.id);
+        });
         const fab = card.querySelector('.card-play-fab');
         fab.addEventListener('click', e => {
           e.stopPropagation();
@@ -1230,7 +1253,7 @@ class PreZifyApp {
     `;
 
     tr.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button, a')) return;
       this.playTrackById(track.id);
     });
 
@@ -1245,6 +1268,18 @@ class PreZifyApp {
       e.stopPropagation();
       this.openAddToPlaylistModal(track);
     });
+
+    if (track.fullTrackUrl) {
+      const fullTrackLink = document.createElement('a');
+      fullTrackLink.className = 'table-action-btn';
+      fullTrackLink.href = track.fullTrackUrl;
+      fullTrackLink.target = '_blank';
+      fullTrackLink.rel = 'noopener noreferrer';
+      fullTrackLink.title = 'Open full track on Apple Music';
+      fullTrackLink.setAttribute('aria-label', 'Open full track on Apple Music');
+      fullTrackLink.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
+      tr.querySelector('.track-actions-cell').appendChild(fullTrackLink);
+    }
 
     return tr;
   }
@@ -1416,6 +1451,9 @@ class PreZifyApp {
     if (this.isScrubbing) return;
 
     this.dom.playerCurrentTime.textContent = this.formatTime(currentTime);
+    if (Number.isFinite(duration) && duration > 0) {
+      this.dom.playerTotalDuration.textContent = this.formatTime(duration);
+    }
     const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
     this.dom.seekerProgress.style.width = `${pct}%`;
 
@@ -1424,7 +1462,11 @@ class PreZifyApp {
   }
 
   onAudioTrackEnd() {
-    if (this.state.repeatMode === 'one') {
+    if (this.state.currentTrack && this.state.currentTrack.isPreview) {
+      this.state.isPlaying = false;
+      this.onAudioStateChange('pause');
+      this.showToast('Preview ended. Use the full-track link in search results.', 'purple');
+    } else if (this.state.repeatMode === 'one') {
       this.audioEngine.seek(0);
       this.audioEngine.play();
     } else if (this.state.repeatMode === 'all') {
@@ -1878,9 +1920,11 @@ class PreZifyApp {
               audioSrc: item.previewUrl,
               cover: hdCover,
               plays: `${(Math.floor(Math.random() * 800) + 120)},000`,
-              duration: Math.round((item.trackTimeMillis || 30000) / 1000),
+              duration: 30,
               year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : 2026,
               isCloud: true,
+              isPreview: true,
+              fullTrackUrl: item.trackViewUrl || null,
               engine: 'Apple Music Cloud',
               lyrics: [
                 { time: 0, text: `♪ Now Streaming: ${item.trackName} ♪` },
@@ -1894,7 +1938,7 @@ class PreZifyApp {
             if (!TRACKS_DATABASE.some(t => t.id === trackObj.id)) {
               TRACKS_DATABASE.push(trackObj);
             }
-            globalTracks.push(trackObj);
+            if (item.previewUrl) globalTracks.push(trackObj);
           });
         }
       }
@@ -1965,12 +2009,12 @@ class PreZifyApp {
       const topCard = document.createElement('div');
       topCard.className = 'top-match-card';
       topCard.innerHTML = `
-        <span class="top-match-tag">${top.isCloud ? 'GLOBAL STREAM' : 'TOP RESULT'}</span>
+        <span class="top-match-tag">${top.isPreview ? '30-SECOND PREVIEW' : (top.isCloud ? 'GLOBAL STREAM' : 'TOP RESULT')}</span>
         <div class="top-match-content">
           <img src="${top.cover}" alt="${top.title}" class="top-match-img" onerror="this.src='images/cover1.jpg'">
           <div class="top-match-info">
             <h3>${top.title}</h3>
-            <p>${top.artist} • ${top.isCloud ? 'Global Cloud' : 'Song'}</p>
+            <p>${top.artist} • ${top.isPreview ? 'Preview only' : (top.isCloud ? 'Global Cloud' : 'Song')}</p>
           </div>
           <button class="card-play-fab" style="opacity:1; transform:none; position:static; margin-left:auto;">
             <i class="bi bi-play-fill"></i>
