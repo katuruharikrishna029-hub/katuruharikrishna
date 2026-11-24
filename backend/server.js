@@ -4,6 +4,7 @@
  */
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
@@ -24,6 +25,8 @@ const PORT = process.env.PORT || 5000;
 const DATA_DIR = path.join(__dirname, 'data');
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 const ROOT_DIR = path.join(__dirname, '..');
+const ITUNES_CACHE_TTL_MS = 5 * 60 * 1000;
+const itunesSearchCache = new Map();
 
 // Helper: Read JSON Data File
 function readJson(filename) {
@@ -71,6 +74,69 @@ function parseRequestBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function fetchItunesSearch(term, country, limit) {
+  return new Promise((resolve, reject) => {
+    const targetUrl = new URL('https://itunes.apple.com/search');
+    targetUrl.searchParams.set('term', term);
+    targetUrl.searchParams.set('entity', 'song');
+    targetUrl.searchParams.set('country', country);
+    targetUrl.searchParams.set('limit', String(limit));
+
+    const request = https.get(targetUrl, {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'PreZifyMusic/1.0'
+      }
+    }, response => {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        response.resume();
+        reject(new Error(`iTunes Search returned HTTP ${response.statusCode}`));
+        return;
+      }
+
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => {
+        body += chunk;
+        if (Buffer.byteLength(body, 'utf8') > 1024 * 1024) {
+          response.destroy(new Error('iTunes Search response exceeded 1 MB'));
+        }
+      });
+      response.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          if (!Array.isArray(payload.results)) {
+            throw new Error('iTunes Search returned an invalid response');
+          }
+          resolve(payload.results);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      response.on('error', reject);
+    });
+
+    request.setTimeout(8000, () => request.destroy(new Error('iTunes Search request timed out')));
+    request.on('error', reject);
+  });
+}
+
+function normalizeAppleUrl(value) {
+  if (typeof value !== 'string') return '';
+  try {
+    const parsedUrl = new URL(value);
+    const isAppleHost = parsedUrl.hostname === 'apple.com' ||
+      parsedUrl.hostname.endsWith('.apple.com') ||
+      parsedUrl.hostname === 'mzstatic.com' ||
+      parsedUrl.hostname.endsWith('.mzstatic.com');
+    if (!isAppleHost || !['http:', 'https:'].includes(parsedUrl.protocol)) return '';
+    parsedUrl.protocol = 'https:';
+    return parsedUrl.toString();
+  } catch {
+    return '';
+  }
 }
 
 // MIME Types Map
@@ -293,7 +359,66 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ==========================================
-  // API ROUTE 8: GET /api/search?q=query
+  // API ROUTE 8: GET /api/itunes/search?q=query
+  // ==========================================
+  if (req.method === 'GET' && pathname === '/api/itunes/search') {
+    const term = String(query.q || '').trim();
+    const country = String(query.country || 'US').toUpperCase();
+    const requestedLimit = Number.parseInt(String(query.limit || '25'), 10);
+    const limit = Math.min(50, Math.max(1, Number.isNaN(requestedLimit) ? 25 : requestedLimit));
+
+    if (!term || term.length > 100 || !/^[A-Z]{2}$/.test(country)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Provide a search term (up to 100 characters) and a two-letter country code.' }));
+      return;
+    }
+
+    const cacheKey = `${country}:${limit}:${term.toLowerCase()}`;
+    const cached = itunesSearchCache.get(cacheKey);
+    try {
+      let results;
+      if (cached && cached.expiresAt > Date.now()) {
+        results = cached.results;
+      } else {
+        if (cached) itunesSearchCache.delete(cacheKey);
+        const apiResults = await fetchItunesSearch(term, country, limit);
+        results = apiResults
+          .filter(item => item && item.wrapperType === 'track' && item.kind === 'song')
+          .map(item => ({
+            trackId: item.trackId,
+            title: item.trackName || '',
+            artist: item.artistName || 'Unknown Artist',
+            album: item.collectionName || 'Single',
+            artworkUrl: normalizeAppleUrl(item.artworkUrl100),
+            previewUrl: normalizeAppleUrl(item.previewUrl),
+            trackViewUrl: normalizeAppleUrl(item.trackViewUrl)
+          }))
+          .filter(item => item.trackId && item.title && item.trackViewUrl);
+
+        if (itunesSearchCache.size >= 100) {
+          itunesSearchCache.delete(itunesSearchCache.keys().next().value);
+        }
+        itunesSearchCache.set(cacheKey, {
+          results,
+          expiresAt: Date.now() + ITUNES_CACHE_TTL_MS
+        });
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      });
+      res.end(JSON.stringify({ success: true, query: term, count: results.length, results }));
+    } catch (error) {
+      console.error('[iTunes Search API] Request failed:', error.message);
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'The iTunes catalog is temporarily unavailable. Please try again.' }));
+    }
+    return;
+  }
+
+  // ==========================================
+  // API ROUTE 9: GET /api/search?q=query
   // ==========================================
   if (req.method === 'GET' && pathname === '/api/search') {
     const q = (query.q || '').trim().toLowerCase();

@@ -712,6 +712,7 @@ class PreZifyApp {
 
     this.isScrubbing = false;
     this.isVolumeScrubbing = false;
+    this.itunesSearchAbortController = null;
 
     // Cache key DOM elements
     this.dom = {
@@ -797,7 +798,10 @@ class PreZifyApp {
       discoverCategoriesGrid: document.getElementById('discover-categories-grid'),
       sidebarPlaylistsList: document.getElementById('sidebar-playlists-list'),
       toastContainer: document.getElementById('toast-container'),
-      likedCountBadge: document.getElementById('liked-count-badge')
+      likedCountBadge: document.getElementById('liked-count-badge'),
+      itunesCatalogSection: document.getElementById('itunes-catalog-section'),
+      itunesCatalogStatus: document.getElementById('itunes-catalog-status'),
+      itunesCatalogResults: document.getElementById('itunes-catalog-results')
     };
 
     this.init();
@@ -1743,6 +1747,11 @@ class PreZifyApp {
   performSearch(query) {
     const rawQuery = query.trim();
     this.state.searchQuery = rawQuery.toLowerCase();
+    if (this.itunesSearchAbortController) {
+      this.itunesSearchAbortController.abort();
+      this.itunesSearchAbortController = null;
+    }
+
     const heading = document.getElementById('search-results-heading');
     const sub = document.getElementById('search-results-sub');
     const emptyState = document.getElementById('search-empty-state');
@@ -1755,6 +1764,9 @@ class PreZifyApp {
       sub.textContent = 'Discover songs, artists, albums, or vibes';
       emptyState.classList.remove('hidden');
       activeContent.style.display = 'none';
+      this.dom.itunesCatalogSection.style.display = 'none';
+      this.dom.itunesCatalogStatus.textContent = '';
+      this.dom.itunesCatalogResults.replaceChildren();
       return;
     }
 
@@ -1770,6 +1782,137 @@ class PreZifyApp {
     );
 
     this.renderSearchResults(matchedTracks, topMatchContainer, tbody);
+    this.dom.itunesCatalogSection.style.display = 'block';
+    this.dom.itunesCatalogStatus.textContent = 'Searching iTunes...';
+    this.dom.itunesCatalogResults.replaceChildren();
+    this.searchItunesCatalog(rawQuery);
+  }
+
+  getItunesStorefront() {
+    const locale = (navigator.language || '').match(/-([a-z]{2})(?:-|$)/i);
+    return locale ? locale[1].toUpperCase() : 'US';
+  }
+
+  async searchItunesCatalog(query) {
+    const controller = new AbortController();
+    this.itunesSearchAbortController = controller;
+    const params = new URLSearchParams({
+      q: query,
+      country: this.getItunesStorefront(),
+      limit: '25'
+    });
+
+    try {
+      const response = await fetch(`${this.apiClient.apiBase}/api/itunes/search?${params}`, {
+        signal: controller.signal
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `iTunes search failed (${response.status})`);
+      }
+      if (!Array.isArray(payload.results)) {
+        throw new Error('iTunes search returned an invalid response');
+      }
+      if (controller.signal.aborted || this.state.searchQuery !== query.toLowerCase()) return;
+
+      this.renderItunesCatalog(payload.results);
+    } catch (error) {
+      if (error.name === 'AbortError' || this.state.searchQuery !== query.toLowerCase()) return;
+      console.error('[PreZify] iTunes catalog search failed:', error);
+      this.dom.itunesCatalogStatus.textContent = 'The iTunes catalog could not be searched. Your PreZify library results are still shown.';
+    }
+  }
+
+  renderItunesCatalog(tracks) {
+    const resultsGrid = this.dom.itunesCatalogResults;
+    resultsGrid.replaceChildren();
+    if (tracks.length === 0) {
+      this.dom.itunesCatalogStatus.textContent = 'No iTunes songs were found for this search.';
+      return;
+    }
+
+    this.dom.itunesCatalogStatus.textContent = `${tracks.length} iTunes catalog results`;
+    const badgeUrl = 'https://tools.applemediaservices.com/api/badges/listen-on-apple-music/badge/en-us?size=250x83';
+    const fragment = document.createDocumentFragment();
+
+    tracks.forEach(track => {
+      const card = document.createElement('article');
+      card.className = 'itunes-result-card';
+
+      const cover = document.createElement('img');
+      cover.className = 'itunes-result-cover';
+      cover.src = track.artworkUrl || 'images/cover1.jpg';
+      cover.alt = `${track.title} album artwork`;
+      cover.loading = 'lazy';
+
+      const metadata = document.createElement('div');
+      metadata.className = 'itunes-result-metadata';
+      const title = document.createElement('h3');
+      title.textContent = track.title;
+      const artist = document.createElement('p');
+      artist.textContent = track.artist;
+      const album = document.createElement('p');
+      album.className = 'itunes-result-album';
+      album.textContent = track.album;
+      metadata.append(title, artist, album);
+
+      card.append(cover, metadata);
+      if (track.previewUrl) {
+        const preview = document.createElement('audio');
+        preview.controls = true;
+        preview.preload = 'none';
+        preview.controlsList = 'nodownload';
+        preview.setAttribute('aria-label', `Short preview of ${track.title} by ${track.artist}`);
+        const showPreviewError = () => {
+          if (card.querySelector('.itunes-preview-error')) return;
+          const errorMessage = document.createElement('p');
+          errorMessage.className = 'itunes-preview-error';
+          errorMessage.textContent = 'This preview could not be played here. Use the Apple Music badge to open the store listing.';
+          card.appendChild(errorMessage);
+        };
+        const supportsPreview = preview.canPlayType('audio/mp4; codecs="mp4a.40.2"');
+        if (!supportsPreview) {
+          showPreviewError();
+        } else {
+          preview.addEventListener('error', showPreviewError);
+          preview.addEventListener('play', () => {
+            resultsGrid.querySelectorAll('audio').forEach(otherPreview => {
+              if (otherPreview !== preview) otherPreview.pause();
+            });
+            this.audioEngine.pause();
+            setTimeout(() => {
+              if (preview.error || preview.networkState === 3) showPreviewError();
+            }, 3000);
+          });
+          const source = document.createElement('source');
+          source.src = track.previewUrl;
+          source.type = 'audio/mp4';
+          preview.appendChild(source);
+          card.appendChild(preview);
+        }
+      } else {
+        const noPreview = document.createElement('p');
+        noPreview.className = 'itunes-no-preview';
+        noPreview.textContent = 'No preview available.';
+        card.appendChild(noPreview);
+      }
+
+      const storeLink = document.createElement('a');
+      storeLink.className = 'itunes-store-badge';
+      storeLink.href = track.trackViewUrl;
+      storeLink.target = '_blank';
+      storeLink.rel = 'noopener noreferrer';
+      storeLink.setAttribute('aria-label', `Open ${track.title} in the Apple music store`);
+      const badge = document.createElement('img');
+      badge.src = badgeUrl;
+      badge.alt = 'Listen on Apple Music';
+      badge.loading = 'lazy';
+      storeLink.appendChild(badge);
+      card.appendChild(storeLink);
+      fragment.appendChild(card);
+    });
+
+    resultsGrid.appendChild(fragment);
   }
 
   renderSearchResults(tracks, topMatchContainer, tbody) {
@@ -2108,7 +2251,7 @@ class PreZifyApp {
         debounceTimer = setTimeout(() => {
           if (val) this.switchView('search');
           this.performSearch(val);
-        }, 150);
+        }, 350);
       });
 
       input.addEventListener('focus', () => {

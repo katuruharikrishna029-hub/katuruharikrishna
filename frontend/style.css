@@ -1248,6 +1248,94 @@ img {
   transform: scale(1.05);
 }
 
+.itunes-catalog-attribution,
+.itunes-catalog-status {
+  color: var(--text-secondary);
+}
+
+.itunes-catalog-attribution {
+  margin-bottom: 12px;
+}
+
+.itunes-catalog-status {
+  min-height: 1.4em;
+  margin-bottom: 14px;
+}
+
+.itunes-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.itunes-result-card {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.itunes-result-cover {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.itunes-result-metadata {
+  min-width: 0;
+}
+
+.itunes-result-metadata h3,
+.itunes-result-metadata p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itunes-result-metadata h3 {
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.itunes-result-metadata p,
+.itunes-no-preview,
+.itunes-preview-error {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.itunes-result-album {
+  margin-top: 4px;
+}
+
+.itunes-result-card audio,
+.itunes-no-preview,
+.itunes-preview-error,
+.itunes-store-badge {
+  grid-column: 1 / -1;
+}
+
+.itunes-result-card audio {
+  width: 100%;
+}
+
+.itunes-store-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+}
+
+.itunes-store-badge img {
+  display: block;
+  width: 140px;
+  height: auto;
+}
+
 .card-play-fab {
   position: absolute;
   bottom: 10px;
@@ -3171,6 +3259,10 @@ img {
 }
 
 @media (max-width: 768px) {
+  .itunes-results-grid {
+    grid-template-columns: 1fr;
+  }
+
   .mobile-search-row {
     display: flex;
     align-items: center;

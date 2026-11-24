@@ -1,8 +1,8 @@
-# 🎵 PreZify – Full-Stack Music Streaming Platform
+# 🎵 PreZify – Full-Stack Music Player
 
 > *"Feel Every Beat. Live Every Moment."*
 
-PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and full-track playback for audio files available to the app. Search covers the loaded catalog; streaming commercial music requires an authorized provider or properly licensed audio.
+PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and full-track playback for audio files available to the app. Search also uses the keyless iTunes Search API for song metadata and available 30-second promotional previews; previews are separate from the local full-track player and link to the Apple store listing.
 
 ---
 
