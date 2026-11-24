@@ -1353,6 +1353,8 @@ class PreZifyApp {
       this.audioEngine.play();
     } else if (this.state.repeatMode === 'all') {
       this.playNextTrack();
+    } else if (this.state.currentTrackIndex + 1 < this.state.queue.length) {
+      this.playNextTrack();
     } else {
       this.state.isPlaying = false;
       this.onAudioStateChange('pause');
@@ -1735,7 +1737,7 @@ class PreZifyApp {
   }
 
   /* ==========================================================================
-     SEARCH ENGINE (LOCAL CATALOG + SPOTIFY SEARCH LINK)
+     SEARCH ENGINE (LOCAL CATALOG)
      ========================================================================== */
 
   performSearch(query) {
@@ -1753,16 +1755,12 @@ class PreZifyApp {
       sub.textContent = 'Discover songs, artists, albums, or vibes';
       emptyState.classList.remove('hidden');
       activeContent.style.display = 'none';
-      document.getElementById('spotify-search-cta').style.display = 'none';
       return;
     }
 
     heading.textContent = `Results for "${rawQuery}"`;
     emptyState.classList.add('hidden');
     activeContent.style.display = 'block';
-    const spotifySearchLink = document.getElementById('spotify-search-link');
-    spotifySearchLink.href = `https://open.spotify.com/search/${encodeURIComponent(rawQuery)}`;
-    document.getElementById('spotify-search-cta').style.display = 'flex';
 
     const matchedTracks = TRACKS_DATABASE.filter(t =>
       t.title.toLowerCase().includes(this.state.searchQuery) ||
@@ -1801,7 +1799,7 @@ class PreZifyApp {
     // Render Table Rows
     tbody.innerHTML = '';
     if (tracks.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No local tracks found. Search Spotify for more music.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No tracks found in your library.</td></tr>';
     } else {
       tracks.forEach((t, i) => {
         tbody.appendChild(this.createTrackTableRow(t, i + 1));
@@ -2378,7 +2376,7 @@ class PreZifyApp {
   }
 
   /* ==========================================================================
-     AUTHENTICATION SYSTEM (SPOTIFY / GOOGLE / CREDENTIALS)
+     AUTHENTICATION SYSTEM (SOCIAL / CREDENTIALS)
      ========================================================================== */
 
   initAuth() {
@@ -2449,12 +2447,6 @@ class PreZifyApp {
     const googleBtn = document.getElementById('btn-auth-google');
     if (googleBtn) {
       googleBtn.addEventListener('click', () => this.handleSocialAuth('Google'));
-    }
-    const spotifyBtn = document.getElementById('btn-auth-spotify');
-    if (spotifyBtn) {
-      spotifyBtn.addEventListener('click', () => {
-        window.open('https://open.spotify.com', '_blank', 'noopener,noreferrer');
-      });
     }
     const appleBtn = document.getElementById('btn-auth-apple');
     if (appleBtn) {
@@ -2531,7 +2523,7 @@ class PreZifyApp {
   }
 
   handleSocialAuth(provider) {
-    const defaultName = provider === 'Google' ? 'Harikrishna (Google)' : provider === 'Spotify' ? 'Harikrishna (Spotify)' : 'Harikrishna User';
+    const defaultName = provider === 'Google' ? 'Harikrishna (Google)' : 'Harikrishna User';
     const email = `harikrishna.${provider.toLowerCase()}@prezify.stream`;
     const avatar = 'images/my-photo-new.jpg';
 

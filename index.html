@@ -326,27 +326,6 @@
             </div>
           </div>
 
-          <!-- SECTION: LIVE GLOBAL MUSIC -->
-          <div class="content-section">
-            <div class="section-header">
-              <div>
-                <h2 class="section-title">Spotify Catalog</h2>
-                <p class="section-subtitle">Search Spotify and listen to music available to your account</p>
-              </div>
-              <a class="section-action-btn" href="https://open.spotify.com/search/top%20hits" target="_blank" rel="noopener noreferrer">
-                <i class="bi bi-spotify"></i> Open Spotify
-              </a>
-            </div>
-
-            <div class="spotify-discovery-card">
-              <i class="bi bi-spotify"></i>
-              <div>
-                <h3>Full songs on Spotify</h3>
-                <p>Spotify handles playback in a new tab. Sign in there to listen to tracks available to your account.</p>
-              </div>
-            </div>
-          </div>
-
           <!-- SECTION: FEATURED PLAYLISTS -->
           <div class="content-section">
             <div class="section-header">
@@ -472,12 +451,6 @@
                   </thead>
                   <tbody id="search-tracks-tbody"></tbody>
                 </table>
-              </div>
-              <div class="spotify-search-cta" id="spotify-search-cta" style="display: none;">
-                <span>Looking for the full song? Open these results in Spotify.</span>
-                <a class="btn btn-primary" id="spotify-search-link" href="https://open.spotify.com/search/" target="_blank" rel="noopener noreferrer">
-                  <i class="bi bi-spotify"></i> Search Spotify
-                </a>
               </div>
             </div>
           </div>
@@ -1133,7 +1106,7 @@
     </div>
   </div>
 
-  <!-- SPOTIFY-STYLE AUTH MODAL (LOGIN / SIGNUP / GOOGLE) -->
+  <!-- AUTH MODAL (LOGIN / SIGNUP / SOCIAL) -->
   <div class="modal-backdrop" id="auth-modal">
     <div class="modal-dialog auth-dialog">
       <button class="modal-close-btn" id="auth-modal-close"><i class="bi bi-x-lg"></i></button>
@@ -1156,11 +1129,6 @@
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
           </svg>
           <span>Continue with Google</span>
-        </button>
-
-        <button class="btn btn-social btn-spotify" id="btn-auth-spotify">
-          <i class="bi bi-spotify social-icon" style="color: #1DB954; font-size: 20px;"></i>
-          <span>Open Spotify</span>
         </button>
 
         <button class="btn btn-social btn-apple" id="btn-auth-apple">

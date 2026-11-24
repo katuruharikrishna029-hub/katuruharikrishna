@@ -2,7 +2,7 @@
 
 > *"Feel Every Beat. Live Every Moment."*
 
-PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and Spotify search links for exploring Spotify's full catalog. Spotify playback opens on Spotify and requires the user to sign in there.
+PreZify is a full-stack music player with a decoupled **Frontend Client** and **Backend REST API & Audio Streaming Server**. It includes a local music catalog, a responsive player, and full-track playback for audio files available to the app. Search covers the loaded catalog; streaming commercial music requires an authorized provider or properly licensed audio.
 
 ---
 
@@ -55,7 +55,7 @@ You can launch PreZify in any of the following ways:
 - Simply **double-click [`PreZify.exe`](file:///c:/Users/harik/OneDrive/Desktop/newapp/PreZify.exe)** in this folder.
 - **What it does**:
   - Automatically launches the embedded high-performance local server with HTTP 206 audio streaming.
-  - Opens PreZify in a dedicated, frameless desktop application window (similar to the Spotify desktop app).
+  - Opens PreZify in a dedicated, frameless desktop application window.
   - Places a PreZify icon in the **Windows System Tray** with quick controls (Open PreZify, Open in Browser, About, Exit).
   - No terminal, node, or python installation required!
 
