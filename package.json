@@ -1,0 +1,23 @@
+{
+  "name": "prezify",
+  "version": "2.0.0",
+  "description": "PreZify – Feel Every Beat. Modern Web Music Streaming Platform",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "music-streaming",
+    "prezify",
+    "audio-stream",
+    "spotify-inspired",
+    "audius",
+    "jamendo"
+  ],
+  "author": "PreZify Engineering",
+  "license": "MIT"
+}

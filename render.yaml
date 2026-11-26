@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: prezify-music
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: "node backend/server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUDIUS_APP_NAME
+        value: PREZIFY
+      - key: JAMENDO_CLIENT_ID
+        sync: false
+      - key: COMMERCIAL_PROVIDER
+        value: none

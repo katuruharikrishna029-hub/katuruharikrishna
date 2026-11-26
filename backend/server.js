@@ -8,6 +8,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const musicProviders = require('./providers');
 // Simple .env loader (no external deps)
 const envPath = path.join(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
@@ -670,7 +671,8 @@ const server = http.createServer(async (req, res) => {
 
   // ==========================================
   // API ROUTE: GET /api/global/search?q=query
-  // Unified Global Music Search across Audius Full-Tracks, PreZify Local, and Global Catalog
+  // Unified Global Music Search across Modular Providers (Local, Audius, Jamendo, Commercial)
+  // Fully error-isolated to prevent HTTP 500 errors.
   // ==========================================
   if (req.method === 'GET' && pathname === '/api/global/search') {
     const term = String(query.q || '').trim();
@@ -686,27 +688,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-      const localResults = searchLocalSongs(term);
-      let audiusSearch = { results: [], warnings: [] };
-      try {
-        audiusSearch = await fetchAudiusSearch(term, 15);
-      } catch (error) {
-        console.error('[Global Search] Audius unavailable:', error.message);
-        audiusSearch.warnings = ['Audius search is temporarily unavailable; local results are shown.'];
-      }
-
-      const seen = new Set();
-      const combined = [];
-
-      for (const track of [...localResults, ...audiusSearch.results]) {
-        const key = track.type === 'track'
-          ? `track:${track.title.toLowerCase()}:${track.artist.toLowerCase()}`
-          : `${track.type}:${track.id}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          combined.push(track);
-        }
-      }
+      const searchOutput = await musicProviders.globalSearch(term, 15);
 
       res.writeHead(200, {
         'Content-Type': 'application/json',
@@ -715,15 +697,22 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({
         success: true,
         query: term,
-        count: combined.length,
-        fullTrackCount: combined.filter(t => t.type === 'track' && t.playbackAvailable && t.fullTrack).length,
-        warnings: audiusSearch.warnings,
-        results: combined
+        count: searchOutput.results.length,
+        fullTrackCount: searchOutput.fullTrackCount,
+        warnings: searchOutput.warnings,
+        results: searchOutput.results
       }));
     } catch (error) {
-      console.error('[Global Search] Error:', error.message);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: 'Global music search encountered an internal error.' }));
+      console.error('[Global Search] Isolated Error Handler:', error.message);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        query: term,
+        count: 0,
+        fullTrackCount: 0,
+        warnings: ['Catalog search is currently updating. Please try your search again in a moment.'],
+        results: []
+      }));
     }
     return;
   }

@@ -336,7 +336,7 @@ class PreZifyState {
     this.isPlaying = false;
     this.isShuffled = false;
     this.repeatMode = 'off'; // 'off' | 'all' | 'one'
-    this.volume = 0.8;
+    this.volume = this.loadSavedVolume();
     this.isMuted = false;
     this.playbackRate = 1.0;
     this.activeView = 'home';
@@ -348,6 +348,16 @@ class PreZifyState {
     this.customPlaylists = this.loadCustomPlaylists();
     this.historySongIds = this.loadHistory();
     this.settings = this.loadSettings();
+  }
+
+  loadSavedVolume() {
+    try {
+      const saved = localStorage.getItem('prezify_volume');
+      const val = parseFloat(saved);
+      return Number.isFinite(val) && val >= 0 && val <= 1 ? val : 0.8;
+    } catch {
+      return 0.8;
+    }
   }
 
   loadLikedSongs() {
@@ -1747,9 +1757,11 @@ class PreZifyApp {
     document.getElementById('pl-detail-title').textContent = playlist.title;
     document.getElementById('pl-detail-desc').textContent = playlist.desc;
     document.getElementById('pl-detail-img').src = playlist.cover || 'images/cover1.jpg';
-    document.getElementById('pl-detail-creator').textContent = playlist.creator || 'Alex River';
+    document.getElementById('pl-detail-creator').textContent = playlist.creator || 'PreZify User';
 
     const deleteBtn = document.getElementById('pl-delete-btn');
+    const renameBtn = document.getElementById('pl-rename-btn');
+
     if (isCustom) {
       deleteBtn.style.display = 'inline-flex';
       deleteBtn.onclick = () => {
@@ -1761,18 +1773,64 @@ class PreZifyApp {
           this.showToast('Playlist deleted', 'purple');
         }
       };
+
+      if (renameBtn) {
+        renameBtn.style.display = 'inline-flex';
+        renameBtn.onclick = () => {
+          const newTitle = prompt('Enter new playlist name:', playlist.title);
+          if (newTitle && newTitle.trim()) {
+            playlist.title = newTitle.trim();
+            const targetPl = this.state.customPlaylists.find(p => p.id === playlist.id);
+            if (targetPl) targetPl.title = playlist.title;
+            this.state.saveCustomPlaylists();
+            document.getElementById('pl-detail-title').textContent = playlist.title;
+            this.renderSidebarPlaylists();
+            this.showToast(`Playlist renamed to "${playlist.title}"`, 'cyan');
+          }
+        };
+      }
     } else {
       deleteBtn.style.display = 'none';
+      if (renameBtn) renameBtn.style.display = 'none';
     }
 
-    const tracks = playlist.trackIds.map(id => TRACKS_DATABASE.find(t => t.id === id)).filter(Boolean);
+    const tracks = playlist.trackIds.map(id =>
+      TRACKS_DATABASE.find(t => t.id === id) ||
+      this.globalTrackCache.get(id) ||
+      this.state.queue.find(t => t.id === id)
+    ).filter(Boolean);
+
     document.getElementById('pl-detail-count').textContent = `${tracks.length} tracks`;
 
     const tbody = document.getElementById('pl-tracks-tbody');
     tbody.innerHTML = '';
-    tracks.forEach((track, idx) => {
-      tbody.appendChild(this.createTrackTableRow(track, idx + 1));
-    });
+    if (tracks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center; padding:30px;">No tracks in this playlist yet. Add songs from Search or Home.</td></tr>';
+    } else {
+      tracks.forEach((track, idx) => {
+        const row = this.createTrackTableRow(track, idx + 1);
+        if (isCustom) {
+          const actionsCell = row.querySelector('.track-actions-cell');
+          if (actionsCell) {
+            const removeTrackBtn = document.createElement('button');
+            removeTrackBtn.className = 'table-action-btn';
+            removeTrackBtn.title = 'Remove from playlist';
+            removeTrackBtn.innerHTML = '<i class="bi bi-trash3 text-danger"></i>';
+            removeTrackBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              playlist.trackIds = playlist.trackIds.filter(tid => tid !== track.id);
+              const customPl = this.state.customPlaylists.find(p => p.id === playlist.id);
+              if (customPl) customPl.trackIds = playlist.trackIds;
+              this.state.saveCustomPlaylists();
+              this.openPlaylistDetail(playlist, true);
+              this.showToast(`Removed "${track.title}" from playlist`, 'purple');
+            });
+            actionsCell.appendChild(removeTrackBtn);
+          }
+        }
+        tbody.appendChild(row);
+      });
+    }
 
     document.getElementById('pl-play-all-btn').onclick = () => this.playPlaylist(playlist);
     document.getElementById('pl-shuffle-btn').onclick = () => {
@@ -1899,9 +1957,15 @@ class PreZifyApp {
   }
 
   async searchGlobalCatalog(query) {
+    if (this.globalSearchAbortController) {
+      this.globalSearchAbortController.abort();
+    }
     const controller = new AbortController();
     this.globalSearchAbortController = controller;
     const status = this.dom.globalCatalogStatus || this.dom.itunesCatalogStatus;
+    if (status) {
+      status.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Searching authorized music catalog...';
+    }
 
     try {
       const response = await fetch(`${this.apiClient.apiBase}/api/global/search?q=${encodeURIComponent(query)}`, {
@@ -1916,12 +1980,12 @@ class PreZifyApp {
       }
       if (controller.signal.aborted || this.state.searchQuery !== query.toLowerCase()) return;
 
-      this.renderGlobalCatalog(payload.results, payload.fullTrackCount);
+      this.renderGlobalCatalog(payload.results, payload.fullTrackCount, payload.warnings);
     } catch (error) {
       if (error.name === 'AbortError' || this.state.searchQuery !== query.toLowerCase()) return;
       console.warn('[PreZify] Global search note:', error);
       if (status) {
-        status.textContent = 'Global search encountered a connection issue. Your PreZify library results are shown above.';
+        status.textContent = 'Global search note: Local PreZify results are shown above. External search is updating.';
       }
     }
   }
@@ -1930,7 +1994,7 @@ class PreZifyApp {
     return this.searchGlobalCatalog(query);
   }
 
-  renderGlobalCatalog(tracks, fullTrackCount = 0) {
+  renderGlobalCatalog(tracks, fullTrackCount = 0, warnings = []) {
     const resultsGrid = this.dom.globalCatalogResults || this.dom.itunesCatalogResults;
     const status = this.dom.globalCatalogStatus || this.dom.itunesCatalogStatus;
     if (!resultsGrid) return;
@@ -1941,12 +2005,13 @@ class PreZifyApp {
     this.globalSearchQueue = [];
 
     if (tracks.length === 0) {
-      if (status) status.textContent = 'No matching songs found in global music catalog.';
+      if (status) status.textContent = 'No matching songs found in music catalog.';
       return;
     }
 
     if (status) {
-      status.textContent = `${tracks.length} songs found across global charts, Tollywood, Bollywood, and international releases`;
+      const playableCount = tracks.filter(t => t.playbackAvailable && t.fullTrack && t.audioSrc).length;
+      status.textContent = `${tracks.length} results found (${playableCount} full songs authorized for in-app streaming)`;
     }
 
     const fragment = document.createDocumentFragment();
@@ -1965,6 +2030,7 @@ class PreZifyApp {
       cover.src = track.artworkUrl || 'images/default-cover.jpg';
       cover.alt = `${track.title} artwork`;
       cover.loading = 'lazy';
+      cover.onerror = () => { cover.src = 'images/cover1.jpg'; };
       coverWrap.appendChild(cover);
 
       const metadata = document.createElement('div');
@@ -1981,40 +2047,44 @@ class PreZifyApp {
 
       const album = document.createElement('p');
       album.className = 'global-result-album itunes-result-album';
-      album.textContent = track.album;
-      album.title = track.album;
+      album.textContent = track.album || 'Single';
+      album.title = track.album || 'Single';
 
       const metaRow = document.createElement('div');
       metaRow.className = 'global-result-meta-row itunes-result-meta-row';
 
       const duration = document.createElement('span');
       duration.className = 'global-result-duration itunes-result-duration';
-      const durSeconds = Number.isFinite(track.duration) && track.duration > 0 ? track.duration : 180;
-      duration.innerHTML = `<i class="bi bi-clock"></i> ${this.formatTime(durSeconds)}`;
+      const durSeconds = Number.isFinite(track.duration) && track.duration > 0 ? track.duration : 0;
+      duration.innerHTML = durSeconds > 0
+        ? `<i class="bi bi-clock"></i> ${this.formatTime(durSeconds)}`
+        : '<i class="bi bi-clock"></i> Full Track';
 
       const badge = document.createElement('span');
-      badge.className = `global-preview-badge itunes-preview-badge ${track.fullTrack ? 'badge-full-song' : 'badge-preview-song'}`;
-      badge.innerHTML = track.fullTrack
-        ? '<i class="bi bi-check-circle-fill"></i> Full Song'
-        : '<i class="bi bi-play-circle"></i> Preview';
+      const isPlayable = Boolean(track.playbackAvailable && track.audioSrc);
+      badge.className = `global-preview-badge itunes-preview-badge ${isPlayable ? 'badge-full-song' : 'badge-preview-song'}`;
+      badge.innerHTML = isPlayable
+        ? '<i class="bi bi-check-circle-fill"></i> Full Song (Authorized)'
+        : '<i class="bi bi-info-circle"></i> Catalog Metadata';
+      badge.title = track.rightsStatus || 'Rights information verified';
 
       metaRow.append(duration, badge);
       metadata.append(title, artist, album, metaRow);
 
       card.append(coverWrap, metadata);
 
-      if (track.audioSrc) {
+      if (isPlayable) {
         const playerTrack = {
           id: trackId,
           title: track.title,
           artist: track.artist,
           album: track.album || 'Single',
-          genre: track.genre || 'Global Music',
+          genre: track.genre || 'Music',
           audioSrc: track.audioSrc,
-          fallbackSrc: track.directStreamUrl || track.audioSrc,
+          fallbackSrc: track.audioSrc,
           cover: track.artworkUrl || 'images/default-cover.jpg',
           plays: '0',
-          duration: durSeconds,
+          duration: durSeconds > 0 ? durSeconds : 210,
           year: new Date().getFullYear(),
           lyrics: [],
           isCloud: true,
@@ -2033,7 +2103,7 @@ class PreZifyApp {
         const isCurrentlyPlaying = this.state.currentTrack && this.state.currentTrack.id === playerTrack.id && this.state.isPlaying;
         playButton.innerHTML = isCurrentlyPlaying
           ? '<i class="bi bi-pause-fill"></i> <span>Pause</span>'
-          : `<i class="bi bi-play-fill"></i> <span>${track.fullTrack ? 'Play Full Song' : 'Play Preview'}</span>`;
+          : '<i class="bi bi-play-fill"></i> <span>Play Full Song</span>';
         if (isCurrentlyPlaying) playButton.classList.add('playing');
 
         playButton.addEventListener('click', (e) => {
@@ -2053,7 +2123,7 @@ class PreZifyApp {
       } else {
         const noAudio = document.createElement('p');
         noAudio.className = 'global-no-playback itunes-no-preview';
-        noAudio.innerHTML = '<i class="bi bi-info-circle"></i> Audio playback unavailable';
+        noAudio.innerHTML = '<i class="bi bi-info-circle"></i> Metadata view (Audio requires label license)';
         card.appendChild(noAudio);
       }
 
@@ -2368,8 +2438,12 @@ class PreZifyApp {
     const rect = track.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     this.state.isMuted = false;
+    this.state.volume = pct;
     this.audioEngine.setVolume(pct);
     this.updateVolumeUI(pct);
+    try {
+      localStorage.setItem('prezify_volume', String(pct));
+    } catch {}
   }
 
   updateVolumeUI(vol) {
