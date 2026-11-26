@@ -495,8 +495,8 @@ class PreZifyAudioEngine {
 
     this.audio.addEventListener('error', (e) => {
       const track = this.state.currentTrack;
-      if (track && track.isItunesPreview && track.fallbackSrc && this.audio.src !== track.fallbackSrc) {
-        console.warn('[PreZify] Retrying with direct Apple preview stream URL...');
+      if (track && track.fallbackSrc && this.audio.src !== track.fallbackSrc) {
+        console.warn('[PreZify] Retrying with direct stream fallback URL...');
         this.audio.src = track.fallbackSrc;
         this.audio.load();
         this.audio.play().catch(err => this.handlePreviewPlaybackError(err));
@@ -510,7 +510,7 @@ class PreZifyAudioEngine {
 
   handlePreviewPlaybackError(error) {
     const track = this.state.currentTrack;
-    if (!track || !track.isItunesPreview) return false;
+    if (!track || (!track.isCloud && !track.isItunesPreview)) return false;
 
     this.audio.pause();
     this.stopSynthFallback();
@@ -744,10 +744,13 @@ class PreZifyApp {
 
     this.isScrubbing = false;
     this.isVolumeScrubbing = false;
-    this.itunesSearchAbortController = null;
-    this.itunesTrackCache = new Map();
-    this.itunesPreviewMessages = new Map();
-    this.itunesSearchQueue = [];
+    this.globalSearchAbortController = null;
+    this.globalTrackCache = new Map();
+    this.globalStatusMessages = new Map();
+    this.globalSearchQueue = [];
+    this.itunesTrackCache = this.globalTrackCache;
+    this.itunesPreviewMessages = this.globalStatusMessages;
+    this.itunesSearchQueue = this.globalSearchQueue;
 
     // Cache key DOM elements
     this.dom = {
@@ -834,9 +837,12 @@ class PreZifyApp {
       sidebarPlaylistsList: document.getElementById('sidebar-playlists-list'),
       toastContainer: document.getElementById('toast-container'),
       likedCountBadge: document.getElementById('liked-count-badge'),
-      itunesCatalogSection: document.getElementById('itunes-catalog-section'),
-      itunesCatalogStatus: document.getElementById('itunes-catalog-status'),
-      itunesCatalogResults: document.getElementById('itunes-catalog-results')
+      globalCatalogSection: document.getElementById('global-catalog-section') || document.getElementById('itunes-catalog-section'),
+      globalCatalogStatus: document.getElementById('global-catalog-status') || document.getElementById('itunes-catalog-status'),
+      globalCatalogResults: document.getElementById('global-catalog-results') || document.getElementById('itunes-catalog-results'),
+      itunesCatalogSection: document.getElementById('global-catalog-section') || document.getElementById('itunes-catalog-section'),
+      itunesCatalogStatus: document.getElementById('global-catalog-status') || document.getElementById('itunes-catalog-status'),
+      itunesCatalogResults: document.getElementById('global-catalog-results') || document.getElementById('itunes-catalog-results')
     };
 
     this.init();
@@ -1216,15 +1222,9 @@ class PreZifyApp {
   playTrackById(trackId) {
     const track = TRACKS_DATABASE.find(t => t.id === trackId)
       || this.state.queue.find(t => t.id === trackId)
+      || this.globalTrackCache.get(trackId)
       || this.itunesTrackCache.get(trackId);
     if (!track) return;
-
-    const trackIsQueued = this.state.queue.some(t => t.id === track.id);
-    if (this.state.currentTrack && this.state.currentTrack.isItunesPreview && !track.isItunesPreview && !trackIsQueued) {
-      this.state.queue = [...TRACKS_DATABASE];
-      this.state.originalQueue = [...this.state.queue];
-      this.state.isShuffled = false;
-    }
 
     // If already playing this track, toggle play/pause
     if (this.state.currentTrack && this.state.currentTrack.id === track.id) {
@@ -1239,33 +1239,37 @@ class PreZifyApp {
       this.state.currentTrackIndex = 0;
     }
 
-    if (!track.isItunesPreview) this.state.addToHistory(track.id);
+    this.state.addToHistory(track.id);
     this.updatePlayerUI(track);
     this.audioEngine.loadTrack(track, true);
     this.updateActiveTrackInUI();
     this.renderQueueDrawer();
   }
 
-  playItunesTrack(trackId) {
-    const track = this.itunesTrackCache.get(trackId);
+  playGlobalTrack(trackId) {
+    const track = this.globalTrackCache.get(trackId) || this.itunesTrackCache.get(trackId);
     if (!track || !track.audioSrc) {
-      this.showToast('Audio preview unavailable.', 'purple');
+      this.showToast('Audio playback unavailable for this track.', 'purple');
       return;
     }
 
-    // If currently playing this preview track, toggle play/pause
+    // If currently playing this track, toggle play/pause
     if (this.state.currentTrack && this.state.currentTrack.id === track.id) {
       this.togglePlayPause();
       this.updateActiveTrackInUI();
       return;
     }
 
-    this.state.queue = [...this.itunesSearchQueue];
-    this.state.originalQueue = [...this.itunesSearchQueue];
+    this.state.queue = [...this.globalSearchQueue];
+    this.state.originalQueue = [...this.globalSearchQueue];
     this.state.currentTrackIndex = this.state.queue.findIndex(t => t.id === track.id);
     this.state.isShuffled = false;
     if (this.dom.playerShuffleBtn) this.dom.playerShuffleBtn.classList.remove('active');
     this.playTrackById(track.id);
+  }
+
+  playItunesTrack(trackId) {
+    return this.playGlobalTrack(trackId);
   }
 
   togglePlayPause() {
@@ -1479,21 +1483,22 @@ class PreZifyApp {
       }
     });
 
-    // Update iTunes / global catalog cards
-    document.querySelectorAll('.itunes-result-card').forEach(card => {
+    // Update Global and catalog cards
+    document.querySelectorAll('.global-result-card, .itunes-result-card').forEach(card => {
       const isCurrent = card.dataset.id === currentId;
       card.classList.toggle('is-active', isCurrent);
-      const playBtn = card.querySelector('.itunes-preview-play');
+      const playBtn = card.querySelector('.global-track-play, .itunes-preview-play');
       if (playBtn) {
         const icon = playBtn.querySelector('i');
         const span = playBtn.querySelector('span');
+        const isFullSong = card.querySelector('.badge-full-song');
         if (isCurrent && this.state.isPlaying) {
           if (icon) icon.className = 'bi bi-pause-fill';
-          if (span) span.textContent = 'Pause Preview';
+          if (span) span.textContent = 'Pause';
           playBtn.classList.add('playing');
         } else {
           if (icon) icon.className = 'bi bi-play-fill';
-          if (span) span.textContent = isCurrent ? 'Resume Preview' : 'Play Preview';
+          if (span) span.textContent = isCurrent ? 'Resume' : (isFullSong ? 'Play Full Song' : 'Play Preview');
           playBtn.classList.remove('playing');
         }
       }
@@ -1847,9 +1852,9 @@ class PreZifyApp {
   performSearch(query) {
     const rawQuery = query.trim();
     this.state.searchQuery = rawQuery.toLowerCase();
-    if (this.itunesSearchAbortController) {
-      this.itunesSearchAbortController.abort();
-      this.itunesSearchAbortController = null;
+    if (this.globalSearchAbortController) {
+      this.globalSearchAbortController.abort();
+      this.globalSearchAbortController = null;
     }
 
     const heading = document.getElementById('search-results-heading');
@@ -1858,15 +1863,18 @@ class PreZifyApp {
     const activeContent = document.getElementById('search-active-content');
     const tbody = document.getElementById('search-tracks-tbody');
     const topMatchContainer = document.getElementById('search-top-match-container');
+    const section = this.dom.globalCatalogSection || this.dom.itunesCatalogSection;
+    const status = this.dom.globalCatalogStatus || this.dom.itunesCatalogStatus;
+    const results = this.dom.globalCatalogResults || this.dom.itunesCatalogResults;
 
     if (!this.state.searchQuery) {
       heading.textContent = 'Search';
       sub.textContent = 'Discover songs, artists, albums, or vibes';
       emptyState.classList.remove('hidden');
       activeContent.style.display = 'none';
-      this.dom.itunesCatalogSection.style.display = 'none';
-      this.dom.itunesCatalogStatus.textContent = '';
-      this.dom.itunesCatalogResults.replaceChildren();
+      if (section) section.style.display = 'none';
+      if (status) status.textContent = '';
+      if (results) results.replaceChildren();
       return;
     }
 
@@ -1882,176 +1890,181 @@ class PreZifyApp {
     );
 
     this.renderSearchResults(matchedTracks, topMatchContainer, tbody);
-    this.dom.itunesCatalogSection.style.display = 'block';
-    this.dom.itunesCatalogStatus.textContent = 'Searching iTunes...';
-    this.dom.itunesCatalogResults.replaceChildren();
-    this.searchItunesCatalog(rawQuery);
+
+    if (section) section.style.display = 'block';
+    if (status) status.textContent = 'Searching worldwide music library & authorized streams...';
+    if (results) results.replaceChildren();
+
+    this.searchGlobalCatalog(rawQuery);
   }
 
-  getItunesStorefront() {
-    const locale = (navigator.language || '').match(/-([a-z]{2})(?:-|$)/i);
-    return locale ? locale[1].toUpperCase() : 'US';
-  }
-
-  async searchItunesCatalog(query) {
+  async searchGlobalCatalog(query) {
     const controller = new AbortController();
-    this.itunesSearchAbortController = controller;
-    const params = new URLSearchParams({
-      q: query,
-      country: this.getItunesStorefront(),
-      limit: '25'
-    });
+    this.globalSearchAbortController = controller;
+    const status = this.dom.globalCatalogStatus || this.dom.itunesCatalogStatus;
 
     try {
-      const response = await fetch(`${this.apiClient.apiBase}/api/itunes/search?${params}`, {
+      const response = await fetch(`${this.apiClient.apiBase}/api/global/search?q=${encodeURIComponent(query)}`, {
         signal: controller.signal
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.error || `iTunes search failed (${response.status})`);
+        throw new Error(payload.error || `Search failed (${response.status})`);
       }
       if (!Array.isArray(payload.results)) {
-        throw new Error('iTunes search returned an invalid response');
+        throw new Error('Search returned an invalid response');
       }
       if (controller.signal.aborted || this.state.searchQuery !== query.toLowerCase()) return;
 
-      this.renderItunesCatalog(payload.results);
+      this.renderGlobalCatalog(payload.results, payload.fullTrackCount);
     } catch (error) {
       if (error.name === 'AbortError' || this.state.searchQuery !== query.toLowerCase()) return;
-      console.error('[PreZify] iTunes catalog search failed:', error);
-      this.dom.itunesCatalogStatus.textContent = 'The iTunes catalog could not be searched. Your PreZify library results are still shown.';
+      console.warn('[PreZify] Global search note:', error);
+      if (status) {
+        status.textContent = 'Global search encountered a connection issue. Your PreZify library results are shown above.';
+      }
     }
   }
 
-  createItunesPreviewTrack(track) {
-    const rawPreview = track.previewUrl || '';
-    const streamUrl = rawPreview ? `${this.apiClient.apiBase}/api/itunes/preview?url=${encodeURIComponent(rawPreview)}` : '';
-    return {
-      id: `itunes-${track.trackId}`,
-      title: track.title,
-      artist: track.artist,
-      album: track.album || 'Single',
-      genre: 'Catalog Preview',
-      audioSrc: streamUrl || rawPreview,
-      fallbackSrc: rawPreview,
-      cover: track.artworkUrl || 'images/cover1.jpg',
-      plays: '0',
-      duration: 30,
-      fullDuration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : 30,
-      year: new Date().getFullYear(),
-      lyrics: [],
-      isCloud: true,
-      isItunesPreview: true
-    };
+  searchItunesCatalog(query) {
+    return this.searchGlobalCatalog(query);
   }
 
-  renderItunesCatalog(tracks) {
-    const resultsGrid = this.dom.itunesCatalogResults;
+  renderGlobalCatalog(tracks, fullTrackCount = 0) {
+    const resultsGrid = this.dom.globalCatalogResults || this.dom.itunesCatalogResults;
+    const status = this.dom.globalCatalogStatus || this.dom.itunesCatalogStatus;
+    if (!resultsGrid) return;
+
     resultsGrid.replaceChildren();
-    this.itunesTrackCache.clear();
-    this.itunesPreviewMessages.clear();
-    this.itunesSearchQueue = [];
+    this.globalTrackCache.clear();
+    this.globalStatusMessages.clear();
+    this.globalSearchQueue = [];
+
     if (tracks.length === 0) {
-      this.dom.itunesCatalogStatus.textContent = 'No catalog songs were found for this search.';
+      if (status) status.textContent = 'No matching songs found in global music catalog.';
       return;
     }
 
-    this.dom.itunesCatalogStatus.textContent = `${tracks.length} songs found in catalog`;
+    if (status) {
+      status.textContent = `${tracks.length} songs found across global charts, Tollywood, Bollywood, and international releases`;
+    }
+
     const fragment = document.createDocumentFragment();
 
     tracks.forEach(track => {
       const card = document.createElement('article');
-      card.className = 'itunes-result-card';
-      const trackId = `itunes-${track.trackId}`;
+      card.className = 'global-result-card itunes-result-card';
+      const trackId = track.id || `track-${Math.random()}`;
       card.dataset.id = trackId;
 
       const coverWrap = document.createElement('div');
-      coverWrap.className = 'itunes-cover-wrap';
+      coverWrap.className = 'global-cover-wrap itunes-cover-wrap';
 
       const cover = document.createElement('img');
-      cover.className = 'itunes-result-cover';
-      cover.src = track.artworkUrl || 'images/cover1.jpg';
-      cover.alt = `${track.title} album artwork`;
+      cover.className = 'global-result-cover itunes-result-cover';
+      cover.src = track.artworkUrl || 'images/default-cover.jpg';
+      cover.alt = `${track.title} artwork`;
       cover.loading = 'lazy';
       coverWrap.appendChild(cover);
 
       const metadata = document.createElement('div');
-      metadata.className = 'itunes-result-metadata';
+      metadata.className = 'global-result-metadata itunes-result-metadata';
 
       const title = document.createElement('h3');
       title.textContent = track.title;
       title.title = track.title;
 
       const artist = document.createElement('p');
-      artist.className = 'itunes-result-artist';
+      artist.className = 'global-result-artist itunes-result-artist';
       artist.textContent = track.artist;
       artist.title = track.artist;
 
       const album = document.createElement('p');
-      album.className = 'itunes-result-album';
+      album.className = 'global-result-album itunes-result-album';
       album.textContent = track.album;
       album.title = track.album;
 
       const metaRow = document.createElement('div');
-      metaRow.className = 'itunes-result-meta-row';
+      metaRow.className = 'global-result-meta-row itunes-result-meta-row';
 
       const duration = document.createElement('span');
-      duration.className = 'itunes-result-duration';
-      const durationSec = Number.isFinite(track.trackTimeMillis) && track.trackTimeMillis > 0
-        ? this.formatTime(track.trackTimeMillis / 1000)
-        : '';
-      duration.innerHTML = durationSec ? `<i class="bi bi-clock"></i> ${durationSec}` : '';
+      duration.className = 'global-result-duration itunes-result-duration';
+      const durSeconds = Number.isFinite(track.duration) && track.duration > 0 ? track.duration : 180;
+      duration.innerHTML = `<i class="bi bi-clock"></i> ${this.formatTime(durSeconds)}`;
 
       const badge = document.createElement('span');
-      badge.className = 'itunes-preview-badge';
-      badge.textContent = track.previewUrl ? '30s Preview' : 'Metadata Only';
+      badge.className = `global-preview-badge itunes-preview-badge ${track.fullTrack ? 'badge-full-song' : 'badge-preview-song'}`;
+      badge.innerHTML = track.fullTrack
+        ? '<i class="bi bi-check-circle-fill"></i> Full Song'
+        : '<i class="bi bi-play-circle"></i> Preview';
 
       metaRow.append(duration, badge);
       metadata.append(title, artist, album, metaRow);
 
       card.append(coverWrap, metadata);
 
-      if (track.previewUrl) {
-        const playerTrack = this.createItunesPreviewTrack(track);
-        this.itunesTrackCache.set(playerTrack.id, playerTrack);
-        this.itunesSearchQueue.push(playerTrack);
+      if (track.audioSrc) {
+        const playerTrack = {
+          id: trackId,
+          title: track.title,
+          artist: track.artist,
+          album: track.album || 'Single',
+          genre: track.genre || 'Global Music',
+          audioSrc: track.audioSrc,
+          fallbackSrc: track.directStreamUrl || track.audioSrc,
+          cover: track.artworkUrl || 'images/default-cover.jpg',
+          plays: '0',
+          duration: durSeconds,
+          year: new Date().getFullYear(),
+          lyrics: [],
+          isCloud: true,
+          fullTrack: Boolean(track.fullTrack),
+          source: track.source || 'global'
+        };
+
+        this.globalTrackCache.set(playerTrack.id, playerTrack);
+        this.globalSearchQueue.push(playerTrack);
 
         const playButton = document.createElement('button');
         playButton.type = 'button';
-        playButton.className = 'btn btn-primary itunes-preview-play';
-        playButton.setAttribute('aria-label', `Play preview of ${track.title} by ${track.artist}`);
+        playButton.className = 'btn btn-primary global-track-play itunes-preview-play';
+        playButton.setAttribute('aria-label', `Play ${track.title} by ${track.artist}`);
 
         const isCurrentlyPlaying = this.state.currentTrack && this.state.currentTrack.id === playerTrack.id && this.state.isPlaying;
         playButton.innerHTML = isCurrentlyPlaying
-          ? '<i class="bi bi-pause-fill"></i> <span>Pause Preview</span>'
-          : '<i class="bi bi-play-fill"></i> <span>Play Preview</span>';
+          ? '<i class="bi bi-pause-fill"></i> <span>Pause</span>'
+          : `<i class="bi bi-play-fill"></i> <span>${track.fullTrack ? 'Play Full Song' : 'Play Preview'}</span>`;
         if (isCurrentlyPlaying) playButton.classList.add('playing');
 
         playButton.addEventListener('click', (e) => {
           e.stopPropagation();
-          this.playItunesTrack(playerTrack.id);
+          this.playGlobalTrack(playerTrack.id);
         });
 
-        const previewMessage = document.createElement('p');
-        previewMessage.className = 'itunes-preview-error';
-        previewMessage.hidden = true;
-        previewMessage.setAttribute('role', 'status');
-        previewMessage.setAttribute('aria-live', 'polite');
-        previewMessage.textContent = 'Audio preview unavailable.';
-        this.itunesPreviewMessages.set(playerTrack.id, previewMessage);
+        const statusMsg = document.createElement('p');
+        statusMsg.className = 'global-playback-error itunes-preview-error';
+        statusMsg.hidden = true;
+        statusMsg.setAttribute('role', 'status');
+        statusMsg.setAttribute('aria-live', 'polite');
+        statusMsg.textContent = 'Audio playback unavailable.';
+        this.globalStatusMessages.set(playerTrack.id, statusMsg);
 
-        card.append(playButton, previewMessage);
+        card.append(playButton, statusMsg);
       } else {
-        const noPreview = document.createElement('p');
-        noPreview.className = 'itunes-no-preview';
-        noPreview.innerHTML = '<i class="bi bi-info-circle"></i> Audio preview unavailable';
-        card.appendChild(noPreview);
+        const noAudio = document.createElement('p');
+        noAudio.className = 'global-no-playback itunes-no-preview';
+        noAudio.innerHTML = '<i class="bi bi-info-circle"></i> Audio playback unavailable';
+        card.appendChild(noAudio);
       }
 
       fragment.appendChild(card);
     });
 
     resultsGrid.appendChild(fragment);
+  }
+
+  renderItunesCatalog(tracks) {
+    return this.renderGlobalCatalog(tracks);
   }
 
   renderSearchResults(tracks, topMatchContainer, tbody) {
@@ -2729,10 +2742,6 @@ class PreZifyApp {
     const googleBtn = document.getElementById('btn-auth-google');
     if (googleBtn) {
       googleBtn.addEventListener('click', () => this.handleSocialAuth('Google'));
-    }
-    const appleBtn = document.getElementById('btn-auth-apple');
-    if (appleBtn) {
-      appleBtn.addEventListener('click', () => this.handleSocialAuth('Apple'));
     }
 
     // Form Submit

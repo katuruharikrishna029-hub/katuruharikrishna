@@ -162,23 +162,29 @@ The PreZify backend exposes the following endpoints (default port: `5000`):
 
 ---
 
-## 🎧 Global Music Search & Legal Streaming Integration
+## 🎧 Global Music Discovery & Licensed Full-Song Streaming
 
 PreZify features a unified music playback experience designed to keep users entirely inside the PreZify website without redirecting to third-party stores or services:
 
 1. **In-App Global Search & Metadata**:
-   - Searches millions of tracks via the iTunes Search API.
-   - Displays song title, artist, album, high-resolution album artwork (300×300), full duration, and preview badges directly inside PreZify.
-2. **Authorized In-App Audio Previews**:
-   - Authorized 30-second promotional audio preview streams are played directly inside the PreZify audio player.
-   - Fully integrated with the bottom player controls: Play/Pause, Seeker bar, Volume, Mute, and Queue drawer.
-   - If a preview is unavailable, a clear *"Audio preview unavailable"* indicator is shown; users are never redirected.
-3. **Full-Song Streaming Integration Requirements**:
-   - The iTunes Search API provides search metadata and authorized 30-second promotional samples for public search.
-   - Streaming **full-length commercial copyrighted songs** requires integration with a licensed streaming provider SDK:
-     - **Apple MusicKit JS**: Requires an Apple Developer Program enrollment, a MusicKit Developer Key (.p8 private key), and subscriber authentication via Apple ID login (`MusicKit.getInstance().authorize()`).
-     - **Spotify Web Playback SDK**: Requires a Spotify Developer Application (Client ID/Secret) and Spotify Premium user OAuth login (`streaming` scope).
-     - **PreZify Local Catalog**: Full tracks included with the application play in full length using HTTP 206 Partial Content streaming from the backend.
+   - Searches millions of tracks across international releases, Bollywood, Tollywood (Telugu), Kollywood (Tamil), Hindi, and global charts.
+   - Displays real song duration, artist name, album name, high-resolution artwork (up to 600×600), genre, and verified playback status directly inside PreZify.
+2. **Authorized Full-Track Streaming**:
+   - **Audius Open Music Protocol**: Legally streams authorized **full-length audio tracks** without 30-second cutoffs.
+   - **PreZify Master Catalog**: High-fidelity full-length local tracks streamed with HTTP 206 Partial Content.
+   - **Global Catalog**: Streams authorized audio with clear badges indicating `Full Song` or `Preview`.
+   - PreZify's player controls (Play/Pause, Seeker, Volume, Mute, Queue, History, Liked Songs) control playback 100% inside PreZify.
+3. **Spotify Developer Integration (Optional for Spotify Premium)**:
+   - To enable Spotify Web Playback SDK for full commercial DRM streaming:
+     1. Visit the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create an App.
+     2. Add your Redirect URI: `http://localhost:5000/api/auth/spotify/callback`.
+     3. Copy your `Client ID` and `Client Secret`.
+     4. Open your `.env` file in the project root and add:
+        ```env
+        SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+        SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+        ```
+     5. Restart the server. PreZify will automatically detect the credentials securely on the backend.
 
 ---
 
